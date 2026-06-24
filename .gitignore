@@ -1,0 +1,32 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+backend/.venv/
+
+# Environment variables / secrets
+.env
+.env.*
+
+# IDE
+.vscode/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary extracted SCADA files
+backend/_tmp_scada/
+
+# Do not commit real Rapid SCADA project files
+*.zip
+backend/scada_project/BaseXML/*.xml
+!backend/scada_project/BaseXML/.gitkeep
