@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchCurrentChannels } from "../api/currentApi";
 import { fetchOverview } from "../api/overviewApi";
+import { fetchStatisticsSummary } from "../api/statisticsApi";
 import ChannelCard from "../components/ChannelCard";
 import SearchBar from "../components/SearchBar";
 import SummaryPanel from "../components/SummaryPanel";
@@ -85,40 +86,80 @@ export default function GeneralOverview() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [statisticsByCnlNum, setStatisticsByCnlNum] = useState({});
+  const [statisticsLoading, setStatisticsLoading] = useState(false);
+  const [statisticsErrorMessage, setStatisticsErrorMessage] = useState("");
+  const [statisticsLoadedAt, setStatisticsLoadedAt] = useState(null);
 
-  const loadChannels = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) {
-      setLoading(true);
-    }
+  const loadChannels = useCallback(async ({ silent = false, includeStatistics = true } = {}) => {
+  if (!silent) {
+    setLoading(true);
+  }
 
-    setErrorMessage("");
+  setErrorMessage("");
 
-    try {
-      const [currentChannels, overviewPayload] = await Promise.all([
-        fetchCurrentChannels(),
-        fetchOverview(),
-      ]);
+  if (includeStatistics) {
+    setStatisticsLoading(true);
+    setStatisticsErrorMessage("");
+  }
 
-      setChannels(currentChannels);
-      setOverview(overviewPayload);
+  try {
+    const [currentChannels, overviewPayload] = await Promise.all([
+      fetchCurrentChannels(),
+      fetchOverview(),
+    ]);
 
-      setLastRefresh(
-        overviewPayload?.last_refresh ||
-          overviewPayload?.fetched_at ||
-          currentChannels?.[0]?.fetched_at ||
-          new Date().toISOString()
-      );
-    } catch (error) {
-      setErrorMessage(
-        error.message ||
-          "Αποτυχία σύνδεσης με το backend. Έλεγξε ότι τρέχει το FastAPI."
-      );
-    } finally {
-      if (!silent) {
-        setLoading(false);
+    setChannels(currentChannels);
+    setOverview(overviewPayload);
+
+    setLastRefresh(
+      overviewPayload?.last_refresh ||
+        overviewPayload?.fetched_at ||
+        currentChannels?.[0]?.fetched_at ||
+        new Date().toISOString()
+    );
+
+    if (includeStatistics) {
+      try {
+        const cnlNums = currentChannels
+          .map((channel) => channel.cnl_num)
+          .filter((cnlNum) => cnlNum !== null && cnlNum !== undefined);
+
+        const statisticsItems = await fetchStatisticsSummary({ cnlNums });
+
+        const nextStatisticsByCnlNum = {};
+
+        for (const item of statisticsItems) {
+          nextStatisticsByCnlNum[String(item.cnl_num)] = item;
+        }
+
+        setStatisticsByCnlNum(nextStatisticsByCnlNum);
+        setStatisticsLoadedAt(new Date().toISOString());
+        setStatisticsErrorMessage("");
+      } catch (statisticsError) {
+        setStatisticsErrorMessage(
+          statisticsError.message ||
+            "Αποτυχία φόρτωσης ιστορικών στατιστικών."
+        );
+      } finally {
+        setStatisticsLoading(false);
       }
     }
-  }, []);
+  } catch (error) {
+    setErrorMessage(
+      error.message ||
+        "Αποτυχία σύνδεσης με το backend. Έλεγξε ότι τρέχει το FastAPI."
+    );
+  } finally {
+    if (!silent) {
+      setLoading(false);
+    }
+
+    if (includeStatistics) {
+      setStatisticsLoading(false);
+    }
+  }
+}, []);
 
   useEffect(() => {
     loadChannels();
@@ -130,8 +171,8 @@ export default function GeneralOverview() {
     }
 
     const intervalId = window.setInterval(() => {
-      loadChannels({ silent: true });
-    }, 10000);
+      loadChannels({ silent: true, includeStatistics: false });
+    }, 30000);
 
     return () => window.clearInterval(intervalId);
   }, [autoRefresh, loadChannels]);
@@ -140,14 +181,21 @@ export default function GeneralOverview() {
     return overview || buildFallbackOverview(channels);
   }, [overview, channels]);
 
+  const channelsWithStatistics = useMemo(() => {
+  return channels.map((channel) => ({
+    ...channel,
+    statistics: statisticsByCnlNum[String(channel.cnl_num)] || null,
+  }));
+  }, [channels, statisticsByCnlNum]);
+
   const visibleChannels = useMemo(() => {
-    return channels.filter(
-      (channel) =>
-        matchesSearch(channel, searchTerm) &&
-        matchesStatusFilter(channel, statusFilter) &&
-        matchesCategoryFilter(channel, categoryFilter)
-    );
-  }, [channels, searchTerm, statusFilter, categoryFilter]);
+  return channelsWithStatistics.filter(
+    (channel) =>
+      matchesSearch(channel, searchTerm) &&
+      matchesStatusFilter(channel, statusFilter) &&
+      matchesCategoryFilter(channel, categoryFilter)
+  );
+  }, [channelsWithStatistics, searchTerm, statusFilter, categoryFilter]);
 
   return (
     <section id="overview" className="page">
@@ -193,10 +241,24 @@ export default function GeneralOverview() {
         </div>
       )}
 
+      {statisticsLoading && !loading && (
+        <div className="state-box state-box--loading">
+          Φόρτωση ιστορικών στατιστικών...
+        </div>
+      )}
+
+      {statisticsErrorMessage && (
+        <div className="state-box state-box--error">
+          <strong>Σφάλμα ιστορικών στατιστικών</strong>
+          <span>{statisticsErrorMessage}</span>
+        </div>
+      )}
+
       {!loading && !errorMessage && (
         <>
           <div className="results-meta">
             Εμφανίζονται {visibleChannels.length} από {channels.length} κανάλια.
+            {statisticsLoadedAt && " Τα ιστορικά στατιστικά φορτώθηκαν επιτυχώς."}
           </div>
 
           <div className="channel-grid">

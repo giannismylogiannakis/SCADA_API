@@ -18,9 +18,114 @@ function formatValueWithUnit(channel) {
   return `${value}${unit}`;
 }
 
+function formatStatValue(value, unit = "") {
+  const formattedValue = formatValue(value);
+
+  if (formattedValue === "—") {
+    return "—";
+  }
+
+  return unit ? `${formattedValue} ${unit}` : formattedValue;
+}
+
+function formatPercent(value) {
+  const formattedValue = formatValue(value);
+
+  if (formattedValue === "—") {
+    return "—";
+  }
+
+  return `${formattedValue}%`;
+}
+
+function buildStatsForCard(channel) {
+  const stats = channel.statistics;
+
+  if (!stats || !stats.has_history) {
+    return [];
+  }
+
+  const unit = channel.unit || "";
+
+  if (channel.category === "flow") {
+    return [
+      {
+        label: "Μ.Ο. 1 ώρας",
+        value: formatStatValue(stats.avg_1h, unit),
+      },
+      {
+        label: "Μ.Ο. 24ώρου",
+        value: formatStatValue(stats.avg_24h, unit),
+      },
+      {
+        label: "Μ.Ο. 7 ημερών",
+        value: formatStatValue(stats.avg_7d, unit),
+      },
+      {
+        label: "Απόκλιση 1ώρου",
+        value: formatPercent(stats.deviation_percent_from_avg_1h),
+      },
+    ];
+  }
+
+  if (channel.category === "cumulative_flow") {
+    return [
+      {
+        label: "Διαφορά 1ώρου",
+        value: formatStatValue(stats.delta_1h, unit),
+      },
+      {
+        label: "Διαφορά 24ώρου",
+        value: formatStatValue(stats.delta_24h, unit),
+      },
+      {
+        label: "Διαφορά 3ημέρου",
+        value: formatStatValue(stats.delta_3d, unit),
+      },
+    ];
+  }
+
+  if (channel.category === "level") {
+    return [
+      {
+        label: "Μ.Ο. 24ώρου",
+        value: formatStatValue(stats.avg_24h, unit),
+      },
+      {
+        label: "Ελάχιστο 24ώρου",
+        value: formatStatValue(stats.min_24h, unit),
+      },
+      {
+        label: "Μέγιστο 24ώρου",
+        value: formatStatValue(stats.max_24h, unit),
+      },
+      {
+        label: "Μεταβολή 1ώρου",
+        value: formatStatValue(stats.delta_1h, unit),
+      },
+    ];
+  }
+
+  return [
+    {
+      label: "Μ.Ο. 1 ώρας",
+      value: formatStatValue(stats.avg_1h, unit),
+    },
+    {
+      label: "Μ.Ο. 24ώρου",
+      value: formatStatValue(stats.avg_24h, unit),
+    },
+    {
+      label: "Μ.Ο. 7 ημερών",
+      value: formatStatValue(stats.avg_7d, unit),
+    },
+  ];
+}
+
 export default function ChannelCard({ channel }) {
   const readingTime = getReadingTime(channel);
   const hasAlert = Boolean(channel.alert_reason);
+  const cardStats = buildStatsForCard(channel);
 
   return (
     <article className={`channel-card channel-card--${channel.operational_status || "unknown"}`}>
@@ -33,11 +138,7 @@ export default function ChannelCard({ channel }) {
           )}
         </div>
 
-        <div className="channel-card__badges">
-          <OperationalBadge channel={channel} />
-          <CategoryBadge channel={channel} />
-          <StatusBadge channel={channel} />
-        </div>
+        
       </div>
 
       <div className="channel-card__operator-main">
@@ -55,10 +156,17 @@ export default function ChannelCard({ channel }) {
         )}
 
         <div className="channel-card__quick-info">
-          <div>
-            <span>SCADA status</span>
-            <strong>{channel.scada_status_text || channel.scada_status || "—"}</strong>
+
+          {cardStats.length > 0 && (
+          <div className="channel-card__stats">
+            {cardStats.map((stat) => (
+              <div className="channel-card__stat" key={stat.label}>
+                <span>{stat.label}</span>
+                <strong>{stat.value}</strong>
+              </div>
+            ))}
           </div>
+        )}
 
           <div>
             <span>Τελευταία ανάγνωση</span>
@@ -67,76 +175,7 @@ export default function ChannelCard({ channel }) {
         </div>
       </div>
 
-      <details className="channel-card__technical">
-        <summary>Τεχνικές λεπτομέρειες</summary>
-
-        <dl className="channel-card__technical-grid">
-          <div>
-            <dt>Channel number</dt>
-            <dd>{channel.cnl_num ?? "—"}</dd>
-          </div>
-
-          <div>
-            <dt>Device name</dt>
-            <dd>{channel.device_name || "—"}</dd>
-          </div>
-
-          <div>
-            <dt>Communication line</dt>
-            <dd>{channel.comm_line_name || "—"}</dd>
-          </div>
-
-          <div>
-            <dt>Tag code</dt>
-            <dd>{channel.tag_code || "—"}</dd>
-          </div>
-
-          <div>
-            <dt>scada_status</dt>
-            <dd>{channel.scada_status ?? "—"}</dd>
-          </div>
-
-          <div>
-            <dt>scada_status_text</dt>
-            <dd>{channel.scada_status_text || "—"}</dd>
-          </div>
-
-          <div>
-            <dt>scada_status_description</dt>
-            <dd>{channel.scada_status_description || "—"}</dd>
-          </div>
-
-          <div>
-            <dt>operational_status</dt>
-            <dd>{channel.operational_status || "—"}</dd>
-          </div>
-
-          <div>
-            <dt>alert_rule_id</dt>
-            <dd>{channel.alert_rule_id || "—"}</dd>
-          </div>
-
-          <div>
-            <dt>alert_rule_type</dt>
-            <dd>{channel.alert_rule_type || "—"}</dd>
-          </div>
-
-          <div>
-            <dt>cnl_type_id</dt>
-            <dd>{channel.cnl_type_id ?? "—"}</dd>
-          </div>
-
-          <div>
-            <dt>format_id</dt>
-            <dd>{channel.format_id ?? "—"}</dd>
-          </div>
-
-          <div>
-            <dt>unit_id</dt>
-            <dd>{channel.unit_id ?? "—"}</dd>
-          </div>
-        </dl>
-      </details>
+      
     </article>
   );
 }

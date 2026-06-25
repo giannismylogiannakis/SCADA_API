@@ -104,6 +104,23 @@ class ScadaApiClient:
 
         return self._safe_json(response)
 
+    async def get_raw(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        ) -> httpx.Response:
+            """Send a read-only GET request to Rapid SCADA and return the raw response."""
+            safe_path = path.lstrip("/")
+
+            try:
+                response = await self._client.get(safe_path, params=params)
+            except httpx.TimeoutException as exc:
+                raise ScadaRequestError(f"Timeout κατά το GET {safe_path}.") from exc
+            except httpx.RequestError as exc:
+                raise ScadaRequestError(f"Αποτυχία GET {safe_path}: {exc}") from exc
+
+            return response    
+
     async def logout(self) -> Any:
         """Logout from Rapid SCADA."""
         try:

@@ -36,3 +36,13 @@ backend/scada_project/BaseXML/*.xml
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
+
+# Large local Rapid SCADA historical export files
+backend/scada_project/BaseXML/HistData.xml
+backend/data/scada_history.sqlite
+
+# Local imported history databases / discovery outputs
+backend/data/
+backend/*.sqlite
+backend/*.sqlite3
+backend/*_discovery.json

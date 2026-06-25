@@ -485,6 +485,39 @@ select {
   line-height: 1.1;
 }
 
+.channel-card__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 0.75rem;
+}
+
+.channel-card__stat {
+  min-width: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.channel-card__stat span {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.channel-card__stat strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
 .channel-card__quick-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -563,6 +596,7 @@ select {
 @media (max-width: 820px) {
   .filters-panel,
   .channel-card__quick-info,
+  .channel-card__stats,
   .channel-card__technical-grid {
     grid-template-columns: 1fr;
   }

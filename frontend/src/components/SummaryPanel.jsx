@@ -59,7 +59,7 @@ export default function SummaryPanel({
             checked={autoRefresh}
             onChange={(event) => onAutoRefreshChange(event.target.checked)}
           />
-          <span>Auto-refresh 10″</span>
+          <span>Auto-refresh 30″</span>
         </label>
 
         <button
