@@ -1,0 +1,36 @@
+{
+  "default_units_by_category": {
+    "flow": "m³/h",
+    "cumulative_flow": "m³",
+    "level": "m",
+    "quality": "%",
+    "motor_current": "A",
+    "pressure": "bar",
+    "unknown": null
+  },
+  "channels": {},
+  "relations": [],
+  "_allowed_categories": [
+    "flow",
+    "cumulative_flow",
+    "level",
+    "quality",
+    "motor_current",
+    "pressure",
+    "unknown"
+  ],
+  "_example_channel_config": {
+    "101": {
+      "category": "flow",
+      "display_name": "Ροή από Μεσκλά",
+      "unit": "m³/h",
+      "installation": "Μεσκλά"
+    },
+    "102": {
+      "category": "cumulative_flow",
+      "display_name": "Σύνολο ροής από Μεσκλά",
+      "unit": "m³",
+      "installation": "Μεσκλά"
+    }
+  }
+}

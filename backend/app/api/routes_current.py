@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.analytics.categories import build_channel_classification
 from app.core.config import settings
 from app.metadata.xml_loader import load_channels_metadata
 from app.metadata.status_loader import load_cnl_statuses
@@ -229,11 +230,18 @@ def merge_current_with_metadata(
         current = current_by_cnl_num.get(cnl_num)
         status_code = current.get("scada_status") if current else None
         status_info = get_scada_status_info(status_code)
+        category_info = build_channel_classification(channel)
 
         item = {
             "cnl_num": cnl_num,
             "active": channel.get("active"),
             "name": channel.get("name"),
+            "display_name": category_info["display_name"],
+            "category": category_info["category"],
+            "category_label": category_info["category_label"],
+            "unit": category_info["unit"],
+            "installation": category_info["installation"],
+            "tag_code": channel.get("tag_code"),
             "tag_code": channel.get("tag_code"),
             "device_num": channel.get("device_num"),
             "device_name": channel.get("device_name"),

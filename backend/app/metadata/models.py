@@ -12,6 +12,11 @@ class DeviceMetadata(BaseModel):
     comm_line_num: int | None = None
 
 
+class UnitMetadata(BaseModel):
+    unit_id: int
+    name: str | None = None
+
+
 class ChannelMetadata(BaseModel):
     cnl_num: int
     active: bool
@@ -27,6 +32,7 @@ class ChannelMetadata(BaseModel):
     cnl_type_id: int | None = None
     format_id: int | None = None
     unit_id: int | None = None
+    unit: str | None = None
 
 
 class ChannelsMetadataResponse(BaseModel):

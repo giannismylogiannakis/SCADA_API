@@ -1,7 +1,7 @@
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from app.metadata.models import ChannelMetadata, CommLineMetadata, DeviceMetadata
+from app.metadata.models import ChannelMetadata, CommLineMetadata, DeviceMetadata, UnitMetadata
 
 
 BASE_XML_DIR = Path(__file__).resolve().parents[2] / "scada_project" / "BaseXML"
@@ -54,6 +54,15 @@ def _load_xml_root(file_name: str) -> ET.Element:
 
     return ET.parse(file_path).getroot()
 
+def _load_optional_xml_root(file_name: str) -> ET.Element | None:
+    """Load an optional XML file from the BaseXML directory."""
+    file_path = BASE_XML_DIR / file_name
+
+    if not file_path.exists():
+        return None
+
+    return ET.parse(file_path).getroot()
+
 
 def load_comm_lines() -> dict[int, CommLineMetadata]:
     """Load communication lines from CommLine.xml."""
@@ -93,6 +102,27 @@ def load_devices() -> dict[int, DeviceMetadata]:
 
     return devices
 
+def load_units() -> dict[int, UnitMetadata]:
+    """Load measurement units from Unit.xml if the file exists."""
+    root = _load_optional_xml_root("Unit.xml")
+
+    if root is None:
+        return {}
+
+    units: dict[int, UnitMetadata] = {}
+
+    for item in root.findall("Unit"):
+        unit_id = _to_int(_get_text(item, "UnitID"))
+
+        if unit_id is None:
+            continue
+
+        units[unit_id] = UnitMetadata(
+            unit_id=unit_id,
+            name=_get_text(item, "Name"),
+        )
+
+    return units
 
 def load_channels_metadata() -> list[ChannelMetadata]:
     """Load channels from Cnl.xml and enrich them with device and comm line metadata."""
@@ -100,6 +130,7 @@ def load_channels_metadata() -> list[ChannelMetadata]:
 
     devices = load_devices()
     comm_lines = load_comm_lines()
+    units = load_units()
 
     channels: list[ChannelMetadata] = []
 
@@ -114,6 +145,8 @@ def load_channels_metadata() -> list[ChannelMetadata]:
 
         comm_line_num = device.comm_line_num if device else None
         comm_line = comm_lines.get(comm_line_num) if comm_line_num is not None else None
+        unit_id = _to_int(_get_text(item, "UnitID"))
+        unit = units.get(unit_id) if unit_id is not None else None
 
         channels.append(
             ChannelMetadata(
@@ -127,7 +160,8 @@ def load_channels_metadata() -> list[ChannelMetadata]:
                 comm_line_name=comm_line.name if comm_line else None,
                 cnl_type_id=_to_int(_get_text(item, "CnlTypeID")),
                 format_id=_to_int(_get_text(item, "FormatID")),
-                unit_id=_to_int(_get_text(item, "UnitID")),
+                unit_id=unit_id,
+                unit=unit.name if unit else None,
             )
         )
 
