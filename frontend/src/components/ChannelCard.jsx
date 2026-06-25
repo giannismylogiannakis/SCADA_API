@@ -1,4 +1,5 @@
 import CategoryBadge from "./CategoryBadge";
+import OperationalBadge from "./OperationalBadge";
 import StatusBadge from "./StatusBadge";
 import { formatDateTime, formatValue } from "../utils/formatUtils";
 
@@ -19,9 +20,10 @@ function formatValueWithUnit(channel) {
 
 export default function ChannelCard({ channel }) {
   const readingTime = getReadingTime(channel);
+  const hasAlert = Boolean(channel.alert_reason);
 
   return (
-    <article className="channel-card">
+    <article className={`channel-card channel-card--${channel.operational_status || "unknown"}`}>
       <div className="channel-card__top">
         <div>
           <h3>{getChannelTitle(channel)}</h3>
@@ -32,6 +34,7 @@ export default function ChannelCard({ channel }) {
         </div>
 
         <div className="channel-card__badges">
+          <OperationalBadge channel={channel} />
           <CategoryBadge channel={channel} />
           <StatusBadge channel={channel} />
         </div>
@@ -44,6 +47,12 @@ export default function ChannelCard({ channel }) {
             {formatValueWithUnit(channel)}
           </strong>
         </div>
+
+        {hasAlert && (
+          <div className={`channel-card__alert channel-card__alert--${channel.operational_status}`}>
+            {channel.alert_reason}
+          </div>
+        )}
 
         <div className="channel-card__quick-info">
           <div>
@@ -95,6 +104,21 @@ export default function ChannelCard({ channel }) {
           <div>
             <dt>scada_status_description</dt>
             <dd>{channel.scada_status_description || "—"}</dd>
+          </div>
+
+          <div>
+            <dt>operational_status</dt>
+            <dd>{channel.operational_status || "—"}</dd>
+          </div>
+
+          <div>
+            <dt>alert_rule_id</dt>
+            <dd>{channel.alert_rule_id || "—"}</dd>
+          </div>
+
+          <div>
+            <dt>alert_rule_type</dt>
+            <dd>{channel.alert_rule_type || "—"}</dd>
           </div>
 
           <div>

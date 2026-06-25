@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchCurrentChannels } from "../api/currentApi";
+import { fetchOverview } from "../api/overviewApi";
 import ChannelCard from "../components/ChannelCard";
 import SearchBar from "../components/SearchBar";
 import SummaryPanel from "../components/SummaryPanel";
-import { isNormalScadaStatus } from "../utils/statusUtils";
 
 function normalizeText(value) {
   return String(value || "")
@@ -35,15 +35,11 @@ function matchesSearch(channel, searchTerm) {
 }
 
 function matchesStatusFilter(channel, statusFilter) {
-  if (statusFilter === "normal") {
-    return isNormalScadaStatus(channel);
+  if (statusFilter === "all") {
+    return true;
   }
 
-  if (statusFilter === "abnormal") {
-    return !isNormalScadaStatus(channel);
-  }
-
-  return true;
+  return channel.operational_status === statusFilter;
 }
 
 function matchesCategoryFilter(channel, categoryFilter) {
@@ -54,8 +50,34 @@ function matchesCategoryFilter(channel, categoryFilter) {
   return channel.category === categoryFilter;
 }
 
+function buildFallbackOverview(channels) {
+  const countByStatus = (status) =>
+    channels.filter((channel) => channel.operational_status === status).length;
+
+  return {
+    total_channels: channels.length,
+    normal_count: countByStatus("normal"),
+    warning_count: countByStatus("warning"),
+    critical_count: countByStatus("critical"),
+    unknown_count: countByStatus("unknown"),
+    invalid_count: channels.filter(
+      (channel) => channel.alert_rule_type === "invalid_value"
+    ).length,
+    scada_normal_count: channels.filter(
+      (channel) => Number(channel.scada_status) === 1
+    ).length,
+    scada_abnormal_count: channels.filter(
+      (channel) => Number(channel.scada_status) !== 1
+    ).length,
+    alerts_count: channels.filter(
+      (channel) => channel.operational_status !== "normal"
+    ).length,
+  };
+}
+
 export default function GeneralOverview() {
   const [channels, setChannels] = useState([]);
+  const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [lastRefresh, setLastRefresh] = useState(null);
@@ -72,9 +94,20 @@ export default function GeneralOverview() {
     setErrorMessage("");
 
     try {
-      const currentChannels = await fetchCurrentChannels();
+      const [currentChannels, overviewPayload] = await Promise.all([
+        fetchCurrentChannels(),
+        fetchOverview(),
+      ]);
+
       setChannels(currentChannels);
-      setLastRefresh(new Date());
+      setOverview(overviewPayload);
+
+      setLastRefresh(
+        overviewPayload?.last_refresh ||
+          overviewPayload?.fetched_at ||
+          currentChannels?.[0]?.fetched_at ||
+          new Date().toISOString()
+      );
     } catch (error) {
       setErrorMessage(
         error.message ||
@@ -104,14 +137,8 @@ export default function GeneralOverview() {
   }, [autoRefresh, loadChannels]);
 
   const summary = useMemo(() => {
-    const normal = channels.filter(isNormalScadaStatus).length;
-
-    return {
-      total: channels.length,
-      normal,
-      abnormal: channels.length - normal,
-    };
-  }, [channels]);
+    return overview || buildFallbackOverview(channels);
+  }, [overview, channels]);
 
   const visibleChannels = useMemo(() => {
     return channels.filter(
@@ -131,14 +158,12 @@ export default function GeneralOverview() {
         </div>
 
         <p className="page-title__description">
-          Προβολή ενεργών καναλιών με κατηγοριοποίηση, metadata από BaseXML και live τιμές από Rapid SCADA API.
+          Προβολή ενεργών καναλιών με επιχειρησιακή αξιολόγηση, metadata από BaseXML και live τιμές από Rapid SCADA API.
         </p>
       </div>
 
       <SummaryPanel
-        total={summary.total}
-        normal={summary.normal}
-        abnormal={summary.abnormal}
+        overview={summary}
         lastRefresh={lastRefresh}
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}

@@ -8,10 +8,6 @@ export default function Header() {
         <h1>Ελληνικό Local Dashboard Τηλεμετρίας</h1>
       </div>
 
-      <div className="header-meta">
-        <span>Read-only προβολή</span>
-        <small>Backend: {getApiBaseUrl()}</small>
-      </div>
     </header>
   );
 }

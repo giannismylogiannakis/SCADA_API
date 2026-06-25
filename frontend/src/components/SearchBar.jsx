@@ -46,15 +46,17 @@ export default function SearchBar({
       </div>
 
       <div className="field">
-        <label htmlFor="status-filter">SCADA status</label>
+        <label htmlFor="status-filter">Επιχειρησιακή κατάσταση</label>
         <select
           id="status-filter"
           value={statusFilter}
           onChange={(event) => onStatusFilterChange(event.target.value)}
         >
-          <option value="all">Όλα</option>
+          <option value="all">Όλες</option>
           <option value="normal">Κανονικά</option>
-          <option value="abnormal">Μη κανονικά</option>
+          <option value="warning">Προειδοποιήσεις</option>
+          <option value="critical">Κρίσιμα</option>
+          <option value="unknown">Άγνωστα</option>
         </select>
       </div>
     </section>

@@ -4,7 +4,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.analytics.categories import build_channel_classification
+from app.analytics.categories import build_channel_classification, load_channels_config
+from app.analytics.rules_engine import evaluate_channel
 from app.core.config import settings
 from app.metadata.xml_loader import load_channels_metadata
 from app.metadata.status_loader import load_cnl_statuses
@@ -402,6 +403,31 @@ async def get_current(
             current_by_cnl_num=current_by_cnl_num,
             include_raw=include_raw,
         )
+
+        rules_config = load_channels_config()
+
+        for item in items:
+            item["fetched_at"] = fetched_at
+
+            evaluation = evaluate_channel(item, config=rules_config)
+            severity = evaluation.get("severity", "unknown")
+
+            item["operational_status"] = severity
+            item["operational_status_label"] = evaluation.get(
+                "severity_label", "Άγνωστο"
+            )
+            item["operational_reason"] = evaluation.get("reason")
+
+            if severity == "normal":
+                item["alert_id"] = None
+                item["alert_reason"] = None
+                item["alert_rule_id"] = None
+                item["alert_rule_type"] = None
+            else:
+                item["alert_id"] = evaluation.get("alert_id")
+                item["alert_reason"] = evaluation.get("reason")
+                item["alert_rule_id"] = evaluation.get("rule_id")
+                item["alert_rule_type"] = evaluation.get("rule_type")
 
         response = {
         "ok": True,
