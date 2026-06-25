@@ -19,9 +19,13 @@ function matchesSearch(channel, searchTerm) {
   }
 
   const searchableText = [
+    channel.display_name,
     channel.name,
+    channel.category_label,
+    channel.installation,
     channel.tag_code,
     channel.device_name,
+    channel.comm_line_name,
     channel.cnl_num,
   ]
     .map(normalizeText)
@@ -42,6 +46,14 @@ function matchesStatusFilter(channel, statusFilter) {
   return true;
 }
 
+function matchesCategoryFilter(channel, categoryFilter) {
+  if (categoryFilter === "all") {
+    return true;
+  }
+
+  return channel.category === categoryFilter;
+}
+
 export default function GeneralOverview() {
   const [channels, setChannels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +61,7 @@ export default function GeneralOverview() {
   const [lastRefresh, setLastRefresh] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const loadChannels = useCallback(async ({ silent = false } = {}) => {
@@ -104,9 +117,10 @@ export default function GeneralOverview() {
     return channels.filter(
       (channel) =>
         matchesSearch(channel, searchTerm) &&
-        matchesStatusFilter(channel, statusFilter)
+        matchesStatusFilter(channel, statusFilter) &&
+        matchesCategoryFilter(channel, categoryFilter)
     );
-  }, [channels, searchTerm, statusFilter]);
+  }, [channels, searchTerm, statusFilter, categoryFilter]);
 
   return (
     <section id="overview" className="page">
@@ -117,7 +131,7 @@ export default function GeneralOverview() {
         </div>
 
         <p className="page-title__description">
-          Προβολή ενεργών καναλιών με metadata από BaseXML και live τιμές από Rapid SCADA API.
+          Προβολή ενεργών καναλιών με κατηγοριοποίηση, metadata από BaseXML και live τιμές από Rapid SCADA API.
         </p>
       </div>
 
@@ -137,6 +151,8 @@ export default function GeneralOverview() {
         onSearchTermChange={setSearchTerm}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
       />
 
       {loading && (

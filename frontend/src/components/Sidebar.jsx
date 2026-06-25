@@ -10,7 +10,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar__note">
-        Φάση 3: μόνο current/live data. Καμία εντολή προς SCADA ή συσκευή.
+        Φάση 4: κατηγοριοποίηση καναλιών και καθαρές κάρτες χειριστή. Παραμένει αυστηρά read-only.
       </div>
     </aside>
   );
