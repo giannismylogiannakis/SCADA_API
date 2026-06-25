@@ -31,3 +31,8 @@ backend/_tmp_scada/
 *.zip
 backend/scada_project/BaseXML/*.xml
 !backend/scada_project/BaseXML/.gitkeep
+
+# Frontend
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
