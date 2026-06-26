@@ -1,13 +1,14 @@
-import { getApiBaseUrl } from "../api/client";
-
 export default function Header() {
   return (
     <header className="app-header">
-      <div>
-        <p className="eyebrow">Rapid SCADA Telemetry Dashboard</p>
-        <h1>Ελληνικό Local Dashboard Τηλεμετρίας</h1>
+      <div className="app-header__brand">
+        <span className="app-header__menu-icon">☰</span>
+        <h1>Rapid SCADA</h1>
       </div>
 
+      <div className="app-header__meta">
+        <span>read-only telemetry dashboard</span>
+      </div>
     </header>
   );
 }
