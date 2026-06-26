@@ -791,3 +791,568 @@ select {
 .summary-card--alerts strong {
   color: #0f172a;
 }
+
+/* ==========================================================================
+   Phase 7 - SCADA-style operational table view
+   ========================================================================== */
+
+body {
+  background: #eef0f2;
+}
+
+.app-header {
+  min-height: 34px;
+  padding: 0.35rem 0.75rem;
+  background: #20282e;
+  box-shadow: none;
+  border-bottom: 1px solid #111820;
+}
+
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.app-header__brand h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.app-header__menu-icon {
+  color: #22b8f0;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.app-header__meta {
+  color: #dbeafe;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: calc(100vh - 35px);
+}
+
+.sidebar {
+  padding: 0.65rem 0.55rem;
+  background: #20282e;
+  border-right: 1px solid #111820;
+  color: #dbeafe;
+}
+
+.sidebar__title {
+  margin: 0 0 0.5rem;
+  padding: 0.35rem 0.5rem;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sidebar__nav {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.sidebar__link {
+  min-height: 30px;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.15rem;
+  color: #e5e7eb;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sidebar__link--active {
+  background: #0b7db0;
+  color: #ffffff;
+}
+
+.sidebar__note {
+  margin-top: 0.8rem;
+  padding: 0.65rem;
+  border-radius: 0.25rem;
+  background: #172027;
+  color: #cbd5e1;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.main-content {
+  padding: 0.55rem;
+  background: #eef0f2;
+}
+
+.page--scada {
+  gap: 0.5rem;
+}
+
+.scada-page-title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid #c6ccd4;
+  background: #f8fafc;
+}
+
+.scada-page-title h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.scada-page-title p {
+  margin: 0.15rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.scada-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.scada-toolbar label {
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.scada-toolbar input {
+  width: 260px;
+  height: 28px;
+  border: 1px solid #aab4c0;
+  border-radius: 0.15rem;
+  padding: 0.25rem 0.45rem;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.82rem;
+}
+
+.summary-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: stretch;
+  border: 1px solid #c6ccd4;
+  background: #f8fafc;
+}
+
+.summary-strip__items {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(90px, 1fr));
+}
+
+.summary-strip__item {
+  display: grid;
+  gap: 0.1rem;
+  min-height: 42px;
+  padding: 0.35rem 0.5rem;
+  border-right: 1px solid #d1d7df;
+  background: #f8fafc;
+}
+
+.summary-strip__item span {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.summary-strip__item strong {
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.summary-strip__item--normal strong {
+  color: #15803d;
+}
+
+.summary-strip__item--warning strong {
+  color: #b45309;
+}
+
+.summary-strip__item--critical strong {
+  color: #b91c1c;
+}
+
+.summary-strip__item--invalid strong {
+  color: #c2410c;
+}
+
+.summary-strip__item--unknown strong {
+  color: #6d28d9;
+}
+
+.summary-strip__item--time strong {
+  font-size: 0.78rem;
+}
+
+.summary-strip__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.55rem;
+}
+
+.compact-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.scada-button {
+  cursor: pointer;
+  height: 28px;
+  border: 1px solid #7f8a99;
+  border-radius: 0.15rem;
+  padding: 0 0.65rem;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.scada-button:hover {
+  background: #dbe3ee;
+}
+
+.scada-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.scada-panel {
+  border: 1px solid #aeb7c2;
+  background: #ffffff;
+}
+
+.scada-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 32px;
+  width: 100%;
+  padding: 0.35rem 0.55rem;
+  border: 0;
+  border-bottom: 1px solid #c6ccd4;
+  background: #dfe4ea;
+  color: #111827;
+  text-align: left;
+}
+
+.scada-panel__header--button {
+  cursor: pointer;
+}
+
+.scada-panel__header h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.scada-panel__header span {
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.operational-table-wrap {
+  overflow: auto;
+  max-width: 100%;
+}
+
+.operational-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  background: #ffffff;
+  font-size: 0.78rem;
+}
+
+.operational-table th,
+.operational-table td {
+  border-right: 1px solid #c8d0d9;
+  border-bottom: 1px solid #c8d0d9;
+  padding: 0.25rem 0.4rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.operational-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #cfd5dc;
+  color: #111827;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.operational-table td {
+  color: #111827;
+  line-height: 1.25;
+}
+
+.operational-table__row--critical {
+  background: #ffe7e7;
+}
+
+.operational-table__row--warning {
+  background: #fff7d6;
+}
+
+.operational-table__row--unknown {
+  background: #f3e8ff;
+}
+
+.operational-table__row--normal:hover {
+  background: #f8fafc;
+}
+
+.operational-channel {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 260px;
+}
+
+.operational-channel strong {
+  display: block;
+  color: #006da8;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.operational-channel small {
+  display: block;
+  margin-top: 0.1rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.severity-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22c55e;
+}
+
+.severity-dot--warning {
+  background: #f59e0b;
+}
+
+.severity-dot--critical {
+  background: #ef4444;
+}
+
+.severity-dot--unknown {
+  background: #8b5cf6;
+}
+
+.numeric-cell {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.empty-operational-state {
+  padding: 0.7rem;
+  color: #334155;
+  background: #f8fafc;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.results-meta--scada {
+  padding: 0.25rem 0.1rem;
+  color: #475569;
+  font-size: 0.78rem;
+}
+
+.state-box {
+  border-radius: 0.2rem;
+  box-shadow: none;
+}
+
+@media (max-width: 1200px) {
+  .summary-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-strip__items {
+    grid-template-columns: repeat(4, minmax(90px, 1fr));
+  }
+
+  .summary-strip__actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-body {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #111820;
+  }
+
+  .scada-page-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scada-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scada-toolbar input {
+    width: 100%;
+  }
+
+  .summary-strip__items {
+    grid-template-columns: repeat(2, minmax(90px, 1fr));
+  }
+}
+
+/* ==========================================================================
+   Phase 7 - Embedded Rapid SCADA custom view cleanup
+   ========================================================================== */
+
+.embedded-scada-view {
+  min-height: 100vh;
+  padding: 0.35rem;
+  background: #eef0f2;
+}
+
+.embedded-scada-view .page {
+  margin: 0;
+}
+
+.embedded-scada-view .scada-page-title {
+  min-height: 34px;
+  padding: 0.3rem 0.45rem;
+}
+
+.embedded-scada-view .scada-page-title h2 {
+  font-size: 0.92rem;
+}
+
+.embedded-scada-view .scada-page-title p {
+  display: none;
+}
+
+.value-with-unit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.value-with-unit strong {
+  font-weight: 900;
+}
+
+.value-with-unit span {
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.operational-table th:nth-child(3),
+.operational-table td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.operational-channel {
+  min-width: 220px;
+}
+
+.operational-channel small {
+  color: #64748b;
+}
+
+/* ==========================================================================
+   Phase 7 - Category filter bar
+   ========================================================================== */
+
+.category-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 34px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #aeb7c2;
+  background: #f8fafc;
+}
+
+.category-filter-bar div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+
+.category-filter-bar strong {
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.category-filter-bar span {
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.category-filter-bar select {
+  height: 28px;
+  min-width: 240px;
+  border: 1px solid #9ca8b5;
+  border-radius: 0.15rem;
+  padding: 0.2rem 0.45rem;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .category-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .category-filter-bar div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .category-filter-bar select {
+    width: 100%;
+  }
+}
