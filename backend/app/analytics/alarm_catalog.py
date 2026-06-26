@@ -11,23 +11,25 @@ DEFAULT_ALARMS_CONFIG_PATH = BASE_DIR / "config" / "alarms_config.json"
 
 def load_alarms_config(
     config_path: str | Path = DEFAULT_ALARMS_CONFIG_PATH,
+    *,
+    include_ui_overrides: bool = True,
 ) -> dict[str, Any]:
-    """Load the alarm/rule catalog from JSON."""
+    """Load the alarm/rule catalog from JSON and optional UI overrides."""
     path = Path(config_path)
 
     if not path.exists():
-        return {
+        data = {
             "version": 1,
             "enabled": True,
             "category_rules": {},
             "channel_overrides": {},
         }
-
-    with path.open("r", encoding="utf-8") as file:
-        data = json.load(file)
+    else:
+        with path.open("r", encoding="utf-8") as file:
+            data = json.load(file)
 
     if not isinstance(data, dict):
-        return {
+        data = {
             "version": 1,
             "enabled": True,
             "category_rules": {},
@@ -47,6 +49,11 @@ def load_alarms_config(
             for cnl_num, value in channel_overrides.items()
             if isinstance(value, dict)
         }
+
+    if include_ui_overrides:
+        from app.settings.repository import apply_rule_overrides_to_catalog
+
+        data = apply_rule_overrides_to_catalog(data)
 
     return data
 

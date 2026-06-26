@@ -41,6 +41,16 @@ _snapshot_lock = asyncio.Lock()
 
 SNAPSHOT_CACHE_TTL_SECONDS = 60.0
 
+def clear_dashboard_snapshot_cache() -> None:
+    """Clear cached dashboard snapshot after local settings changes."""
+    global _snapshot_cache
+    global _snapshot_cache_key
+    global _snapshot_cache_saved_at
+
+    _snapshot_cache = None
+    _snapshot_cache_key = None
+    _snapshot_cache_saved_at = 0.0
+
 
 async def reset_shared_scada_client() -> None:
     """Close and forget the shared SCADA client/session."""

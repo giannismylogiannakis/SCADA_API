@@ -100,7 +100,52 @@ def infer_category(name: Any, tag_code: Any) -> str:
 
 def load_channels_config(
     config_path: str | Path = DEFAULT_CHANNELS_CONFIG_PATH,
+    *,
+    include_ui_overrides: bool = True,
 ) -> dict[str, Any]:
+    """Load local channel configuration from JSON and optional UI overrides."""
+    path = Path(config_path)
+
+    if not path.exists():
+        data = {"channels": {}, "relations": []}
+    else:
+        with path.open("r", encoding="utf-8") as file:
+            data = json.load(file)
+
+    if not isinstance(data, dict):
+        data = {"channels": {}, "relations": []}
+
+    channels = data.get("channels", {})
+
+    if isinstance(channels, list):
+        normalized_channels = {}
+
+        for item in channels:
+            if not isinstance(item, dict):
+                continue
+
+            cnl_num = item.get("cnl_num")
+            if cnl_num is None:
+                continue
+
+            normalized_channels[str(cnl_num)] = item
+
+        data["channels"] = normalized_channels
+
+    elif isinstance(channels, dict):
+        data["channels"] = {str(key): value for key, value in channels.items()}
+    else:
+        data["channels"] = {}
+
+    if not isinstance(data.get("relations"), list):
+        data["relations"] = []
+
+    if include_ui_overrides:
+        from app.settings.repository import apply_channel_overrides_to_config
+
+        data = apply_channel_overrides_to_config(data)
+
+    return data
     """Load local channel configuration from JSON."""
     path = Path(config_path)
 

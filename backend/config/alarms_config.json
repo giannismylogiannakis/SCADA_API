@@ -37,7 +37,7 @@
         "condition_type": "static_threshold",
         "priority": 20,
         "reason_template": "Η τιμή είναι εκτός ορίων.",
-        "operator_reason": "Η τιμή ξεπέρασε όριο που έχει οριστεί στο channels_config.json.",
+        "operator_reason": "Η τιμή είναι εκτός των βασικών ορίων λειτουργίας.",
         "technical_description": "Uses warning_low, critical_low, warning_high, critical_high from per-channel config. Does nothing if no thresholds exist.",
         "notes": "Safe default because it only runs when thresholds are explicitly configured per channel."
       }
@@ -65,8 +65,8 @@
         "zero_epsilon": 1e-06,
         "severity": "warning",
         "priority": 40,
-        "reason_template": "Η ροή έχει μηδενιστεί.",
-        "operator_reason": "Η ροή είναι μηδενική σε κανάλι όπου έχουμε ενεργοποιήσει έλεγχο μηδενικής ροής.",
+        "reason_template": "Η ροή είναι μηδενική ή σχεδόν μηδενική.",
+        "operator_reason": "Η ροή είναι μηδενική ή σχεδόν μηδενική.",
         "technical_description": "Runs only when zero_flow_enabled=true is configured for the channel.",
         "notes": "Not global by design, to avoid false positives on flows that normally stop."
       },

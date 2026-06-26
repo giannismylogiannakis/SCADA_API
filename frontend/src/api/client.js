@@ -5,17 +5,19 @@ export function getApiBaseUrl() {
   return API_BASE_URL;
 }
 
-export async function apiGet(path, options = {}) {
+async function apiRequest(path, options = {}) {
   const timeoutMs = options.timeoutMs || 30000;
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      method: "GET",
+      method: options.method || "GET",
       headers: {
         Accept: "application/json",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
       },
+      body: options.body ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
     });
 
@@ -42,4 +44,34 @@ export async function apiGet(path, options = {}) {
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+export async function apiGet(path, options = {}) {
+  return apiRequest(path, {
+    ...options,
+    method: "GET",
+  });
+}
+
+export async function apiPost(path, body = {}, options = {}) {
+  return apiRequest(path, {
+    ...options,
+    method: "POST",
+    body,
+  });
+}
+
+export async function apiPut(path, body = {}, options = {}) {
+  return apiRequest(path, {
+    ...options,
+    method: "PUT",
+    body,
+  });
+}
+
+export async function apiDelete(path, options = {}) {
+  return apiRequest(path, {
+    ...options,
+    method: "DELETE",
+  });
 }

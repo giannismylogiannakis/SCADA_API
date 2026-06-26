@@ -1157,6 +1157,36 @@ def choose_worst_alert(alerts: list[dict[str, Any]]) -> dict[str, Any] | None:
         ),
     )[0]
 
+def get_channel_custom_rules(
+    channel_config: dict[str, Any],
+    category: str,
+) -> list[dict[str, Any]]:
+    """Return custom per-channel rules stored in dashboard settings."""
+    raw_rules = channel_config.get("custom_rules")
+
+    if not isinstance(raw_rules, list):
+        return []
+
+    rules: list[dict[str, Any]] = []
+
+    for index, raw_rule in enumerate(raw_rules):
+        if not isinstance(raw_rule, dict):
+            continue
+
+        rule = dict(raw_rule)
+        rule_id = str(rule.get("rule_id") or f"custom_{category}_{index + 1}").strip()
+
+        if not rule_id:
+            continue
+
+        rule["rule_id"] = rule_id
+        rule.setdefault("category", category)
+        rule.setdefault("enabled", True)
+        rule.setdefault("priority", 90)
+
+        rules.append(rule)
+
+    return rules
 
 def evaluate_channel(
     channel: dict[str, Any],
@@ -1173,7 +1203,10 @@ def evaluate_channel(
 
     alerts: list[dict[str, Any]] = []
 
-    for rule in get_catalog_rules_for_category(category, catalog=alarm_catalog):
+    catalog_rules = get_catalog_rules_for_category(category, catalog=alarm_catalog)
+    custom_rules = get_channel_custom_rules(channel_config, category)
+
+    for rule in [*catalog_rules, *custom_rules]:
         effective_rule = build_effective_rule(
             rule=rule,
             channel=channel,

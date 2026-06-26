@@ -6,6 +6,7 @@ from app.api import (
     routes_current,
     routes_history_discovery,
     routes_history,
+    routes_settings,
 )
 from app.api.routes_health import router as health_router
 from app.api.routes_metadata import router as metadata_router
@@ -27,7 +28,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -36,6 +37,7 @@ app.include_router(metadata_router)
 app.include_router(routes_current.router)
 app.include_router(routes_categories.router)
 app.include_router(routes_alerts.router)
+app.include_router(routes_settings.router)
 app.include_router(routes_history_discovery.router)
 app.include_router(routes_history.history_router)
 app.include_router(routes_history.statistics_router)
@@ -57,4 +59,6 @@ def root():
         "history_channel": "/api/history/101?period=24h",
         "statistics_channel": "/api/statistics/101",
         "statistics_summary": "/api/statistics/summary",
+        "settings_channels": "/api/settings/channels",
+        "settings_rules": "/api/settings/rules",
     }
