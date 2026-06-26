@@ -6,7 +6,7 @@ export function getApiBaseUrl() {
 }
 
 export async function apiGet(path, options = {}) {
-  const timeoutMs = options.timeoutMs || 15000;
+  const timeoutMs = options.timeoutMs || 30000;
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 

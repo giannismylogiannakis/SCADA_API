@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchAlerts } from "../api/alertsApi";
-import { fetchCurrentChannels } from "../api/currentApi";
-import { fetchOverview } from "../api/overviewApi";
 import { fetchStatisticsSummary } from "../api/statisticsApi";
 import { formatDateTime, formatValue } from "../utils/formatUtils";
 
@@ -577,22 +575,33 @@ export default function OperationalTablesPage() {
     }
 
     try {
-      const [currentChannels, overviewPayload, alertsPayload] = await Promise.all([
-        fetchCurrentChannels(),
-        fetchOverview(),
-        fetchAlerts(),
-      ]);
+      // Phase 8 hotfix:
+      // Use one backend call that returns evaluations for all channels.
+      // This avoids three simultaneous Rapid SCADA logins from the frontend.
+      const alertsPayload = await fetchAlerts({ includeNormal: true });
+      const evaluations = Array.isArray(alertsPayload?.alerts) ? alertsPayload.alerts : [];
 
-      const activeAlerts = Array.isArray(alertsPayload?.alerts) ? alertsPayload.alerts : [];
+      const currentChannels = evaluations.map((evaluation) => ({
+        ...evaluation,
+        name: evaluation.channel_name || evaluation.display_name,
+        operational_status: evaluation.severity || "unknown",
+        operational_status_label: evaluation.severity_label || "Άγνωστο",
+        alert_reason: evaluation.severity !== "normal" ? evaluation.reason : null,
+        alert_rule_id: evaluation.rule_id,
+        alert_rule_type: evaluation.rule_type,
+      }));
+
+      const activeAlerts = currentChannels.filter(
+        (evaluation) => evaluation.operational_status !== "normal"
+      );
+      const overviewPayload = buildFallbackOverview(currentChannels, activeAlerts);
 
       setChannels(currentChannels);
       setOverview(overviewPayload);
       setAlerts(activeAlerts);
 
       setLastRefresh(
-        overviewPayload?.last_refresh ||
-          overviewPayload?.fetched_at ||
-          alertsPayload?.fetched_at ||
+        alertsPayload?.fetched_at ||
           currentChannels?.[0]?.fetched_at ||
           new Date().toISOString()
       );
@@ -661,11 +670,14 @@ export default function OperationalTablesPage() {
     return buildAlertsByCnlNum(alerts);
   }, [alerts]);
 
-  const rows = useMemo(() => {
+    const rows = useMemo(() => {
   return channels
     .map((channel) => ({
       ...channel,
-      statistics: statisticsByCnlNum[String(channel.cnl_num)] || null,
+      statistics:
+        statisticsByCnlNum[String(channel.cnl_num)] ||
+        channel.statistics ||
+        null,
       alert: alertsByCnlNum[String(channel.cnl_num)] || null,
     }))
     .filter((row) => matchesSearch(row, searchTerm))

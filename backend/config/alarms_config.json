@@ -1,0 +1,351 @@
+{
+  "version": 1,
+  "enabled": true,
+  "description": "Default read-only operational alarm/rule catalog for the Ελληνικό Local Rapid SCADA Telemetry Dashboard.",
+  "severity_order": [
+    "critical",
+    "warning",
+    "unknown",
+    "normal"
+  ],
+  "rule_defaults": {
+    "min_baseline_value": 1e-06,
+    "min_delta_epsilon": 1e-06,
+    "max_alerts_per_channel": 1
+  },
+  "category_rules": {
+    "all": [
+      {
+        "rule_id": "invalid_scada_value",
+        "enabled": true,
+        "category": "all",
+        "condition_type": "invalid_value",
+        "severity": "warning",
+        "severity_by_category": {
+          "level": "critical"
+        },
+        "priority": 10,
+        "reason_template": "Η τιμή του καναλιού δεν είναι έγκυρη σύμφωνα με το SCADA.",
+        "operator_reason": "Μη έγκυρη ή undefined τιμή SCADA.",
+        "technical_description": "Triggered when Rapid SCADA status is not considered valid or the current value is not numeric.",
+        "notes": "Always enabled because invalid SCADA data is a technical reliability problem."
+      },
+      {
+        "rule_id": "static_threshold_range",
+        "enabled": true,
+        "category": "all",
+        "condition_type": "static_threshold",
+        "priority": 20,
+        "reason_template": "Η τιμή είναι εκτός ορίων.",
+        "operator_reason": "Η τιμή ξεπέρασε όριο που έχει οριστεί στο channels_config.json.",
+        "technical_description": "Uses warning_low, critical_low, warning_high, critical_high from per-channel config. Does nothing if no thresholds exist.",
+        "notes": "Safe default because it only runs when thresholds are explicitly configured per channel."
+      }
+    ],
+    "flow": [
+      {
+        "rule_id": "flow_negative_value",
+        "enabled": true,
+        "category": "flow",
+        "condition_type": "negative_value",
+        "critical_below": -1e-06,
+        "severity": "warning",
+        "priority": 30,
+        "reason_template": "Η ροή έχει αρνητική τιμή, κάτι που συνήθως δεν αναμένεται.",
+        "operator_reason": "Πιθανό λάθος μέτρησης ή λάθος κλίμακα/σήμα.",
+        "technical_description": "Triggered when current flow is below zero, unless allow_negative=true is set on the channel.",
+        "notes": "Can be disabled per channel if negative flow is physically meaningful."
+      },
+      {
+        "rule_id": "flow_zero_current_value",
+        "enabled": true,
+        "category": "flow",
+        "condition_type": "zero_value",
+        "requires_channel_flag": "zero_flow_enabled",
+        "zero_epsilon": 1e-06,
+        "severity": "warning",
+        "priority": 40,
+        "reason_template": "Η ροή έχει μηδενιστεί.",
+        "operator_reason": "Η ροή είναι μηδενική σε κανάλι όπου έχουμε ενεργοποιήσει έλεγχο μηδενικής ροής.",
+        "technical_description": "Runs only when zero_flow_enabled=true is configured for the channel.",
+        "notes": "Not global by design, to avoid false positives on flows that normally stop."
+      },
+      {
+        "rule_id": "flow_low_vs_1h_avg",
+        "enabled": false,
+        "category": "flow",
+        "condition_type": "deviation_below_baseline",
+        "baseline": "avg_1h",
+        "baseline_label": "Μ.Ο. 1 ώρας",
+        "warning_deviation_percent": 40,
+        "critical_deviation_percent": 70,
+        "min_baseline_value": 1e-06,
+        "priority": 60,
+        "reason_template": "Η τρέχουσα ροή είναι {deviation_percent_abs}% χαμηλότερη από τον {baseline_label}.",
+        "operator_reason": "Η ροή είναι αισθητά χαμηλότερη από την πρόσφατη συμπεριφορά της.",
+        "technical_description": "Compares current_value against statistics.avg_1h from local SQLite history.",
+        "notes": "Disabled by default because 1h averages can be noisy. Enable per channel after validation."
+      },
+      {
+        "rule_id": "flow_low_vs_24h_avg",
+        "enabled": true,
+        "category": "flow",
+        "condition_type": "deviation_below_baseline",
+        "baseline": "avg_24h",
+        "baseline_label": "Μ.Ο. 24ώρου",
+        "warning_deviation_percent": 70,
+        "critical_deviation_percent": 90,
+        "min_baseline_value": 1e-06,
+        "priority": 70,
+        "reason_template": "Η τρέχουσα ροή είναι {deviation_percent_abs}% χαμηλότερη από τον {baseline_label}.",
+        "operator_reason": "Η ροή είναι πολύ χαμηλότερη από τη μέση τιμή του τελευταίου 24ώρου.",
+        "technical_description": "Compares current_value against statistics.avg_24h from local SQLite history.",
+        "notes": "Very conservative default to avoid alarm flood. Lower it after operations validate the channels."
+      },
+      {
+        "rule_id": "flow_low_vs_7d_avg",
+        "enabled": false,
+        "category": "flow",
+        "condition_type": "deviation_below_baseline",
+        "baseline": "avg_7d",
+        "baseline_label": "Μ.Ο. 7 ημερών",
+        "warning_deviation_percent": 50,
+        "critical_deviation_percent": 80,
+        "min_baseline_value": 1e-06,
+        "priority": 80,
+        "reason_template": "Η τρέχουσα ροή είναι {deviation_percent_abs}% χαμηλότερη από τον {baseline_label}.",
+        "operator_reason": "Η ροή είναι ασυνήθιστα χαμηλή σε σχέση με την εβδομαδιαία εικόνα.",
+        "technical_description": "Compares current_value against statistics.avg_7d from local SQLite history.",
+        "notes": "Disabled by default until the 7-day baseline is verified for each installation."
+      },
+      {
+        "rule_id": "flow_high_vs_24h_avg",
+        "enabled": true,
+        "category": "flow",
+        "condition_type": "deviation_above_baseline",
+        "baseline": "avg_24h",
+        "baseline_label": "Μ.Ο. 24ώρου",
+        "warning_deviation_percent": 250,
+        "critical_deviation_percent": 400,
+        "min_baseline_value": 1e-06,
+        "priority": 90,
+        "reason_template": "Η τρέχουσα ροή είναι ασυνήθιστα υψηλή σε σχέση με τον {baseline_label}.",
+        "operator_reason": "Η ροή εμφανίζει μεγάλη άνοδο σε σχέση με τη συνήθη τιμή.",
+        "technical_description": "Compares current_value against statistics.avg_24h from local SQLite history.",
+        "notes": "Very conservative default to catch only large spikes without making noise."
+      }
+    ],
+    "cumulative_flow": [
+      {
+        "rule_id": "cumulative_negative_delta_1h",
+        "enabled": true,
+        "category": "cumulative_flow",
+        "condition_type": "delta_negative",
+        "delta_field": "delta_1h",
+        "severity": "warning",
+        "priority": 30,
+        "reason_template": "Το σύνολο ροής μειώθηκε την τελευταία ώρα. Πιθανό reset ή λάθος μέτρηση.",
+        "operator_reason": "Το αθροιστικό σύνολο δεν πρέπει κανονικά να γυρίζει προς τα πίσω.",
+        "technical_description": "Uses statistics.delta_1h. Negative delta indicates reset/drop/spike correction.",
+        "notes": "Enabled because negative cumulative deltas are usually suspicious."
+      },
+      {
+        "rule_id": "cumulative_negative_delta_24h",
+        "enabled": true,
+        "category": "cumulative_flow",
+        "condition_type": "delta_negative",
+        "delta_field": "delta_24h",
+        "severity": "warning",
+        "priority": 31,
+        "reason_template": "Το σύνολο ροής μειώθηκε στο τελευταίο 24ωρο. Πιθανό reset ή λάθος μέτρηση.",
+        "operator_reason": "Το αθροιστικό σύνολο μειώθηκε αντί να αυξηθεί.",
+        "technical_description": "Uses statistics.delta_24h. Negative delta indicates reset/drop/spike correction.",
+        "notes": "Enabled because it is a robust cumulative-meter rule."
+      },
+      {
+        "rule_id": "cumulative_stuck_1h",
+        "enabled": true,
+        "category": "cumulative_flow",
+        "condition_type": "delta_below_min",
+        "delta_field": "delta_1h",
+        "requires_channel_flag": "movement_expected",
+        "warning_min_delta": 1e-06,
+        "priority": 60,
+        "reason_template": "Το σύνολο ροής δεν έχει μεταβληθεί την τελευταία ώρα.",
+        "operator_reason": "Πιθανό stuck meter, εφόσον στο κανάλι αναμένεται μεταβολή.",
+        "technical_description": "Runs only when movement_expected=true is configured for the channel.",
+        "notes": "Guarded by a channel flag to avoid false positives."
+      },
+      {
+        "rule_id": "cumulative_stuck_24h",
+        "enabled": true,
+        "category": "cumulative_flow",
+        "condition_type": "delta_below_min",
+        "delta_field": "delta_24h",
+        "requires_channel_flag": "movement_expected",
+        "warning_min_delta": 1e-06,
+        "critical_min_delta": 1e-06,
+        "priority": 61,
+        "reason_template": "Το σύνολο ροής δεν έχει μεταβληθεί στο τελευταίο 24ωρο.",
+        "operator_reason": "Πιθανό stuck meter ή απουσία πραγματικής κατανάλωσης.",
+        "technical_description": "Uses statistics.delta_24h and runs only when movement_expected=true is configured.",
+        "notes": "Critical can be overridden per channel once the expected behavior is known."
+      },
+      {
+        "rule_id": "cumulative_spike_1h",
+        "enabled": true,
+        "category": "cumulative_flow",
+        "condition_type": "delta_above_max",
+        "delta_field": "delta_1h",
+        "max_delta_config_key": "max_delta_1h",
+        "severity": "warning",
+        "priority": 70,
+        "reason_template": "Η διαφορά 1 ώρας είναι ασυνήθιστα υψηλή.",
+        "operator_reason": "Πιθανό spike, λάθος μέτρηση ή πραγματικά μεγάλη κατανάλωση.",
+        "technical_description": "Uses max_delta_1h from per-channel config. Does nothing if the channel limit is not set.",
+        "notes": "Safe default because it requires explicit per-channel limit."
+      },
+      {
+        "rule_id": "cumulative_spike_24h",
+        "enabled": true,
+        "category": "cumulative_flow",
+        "condition_type": "delta_above_max",
+        "delta_field": "delta_24h",
+        "max_delta_config_key": "max_delta_24h",
+        "severity": "warning",
+        "priority": 71,
+        "reason_template": "Η διαφορά 24ώρου είναι ασυνήθιστα υψηλή.",
+        "operator_reason": "Πιθανό spike, λάθος μέτρηση ή πραγματικά μεγάλη ημερήσια κατανάλωση.",
+        "technical_description": "Uses max_delta_24h from per-channel config. Does nothing if the channel limit is not set.",
+        "notes": "Safe default because it requires explicit per-channel limit."
+      }
+    ],
+    "level": [
+      {
+        "rule_id": "level_rapid_change_1h",
+        "enabled": true,
+        "category": "level",
+        "condition_type": "rapid_change",
+        "delta_field": "delta_1h",
+        "warning_abs_delta_config_key": "rapid_change_warning_1h",
+        "critical_abs_delta_config_key": "rapid_change_critical_1h",
+        "priority": 50,
+        "reason_template_increase": "Η στάθμη αυξήθηκε απότομα την τελευταία ώρα.",
+        "reason_template_decrease": "Η στάθμη μειώθηκε απότομα την τελευταία ώρα.",
+        "operator_reason": "Απότομη μεταβολή στάθμης.",
+        "technical_description": "Uses statistics.delta_1h and per-channel rapid_change thresholds.",
+        "notes": "Does nothing until rapid_change thresholds are set per channel."
+      },
+      {
+        "rule_id": "level_deviation_vs_24h_avg",
+        "enabled": false,
+        "category": "level",
+        "condition_type": "absolute_deviation_from_baseline",
+        "baseline": "avg_24h",
+        "baseline_label": "Μ.Ο. 24ώρου",
+        "warning_abs_deviation_config_key": "level_abs_deviation_warning",
+        "critical_abs_deviation_config_key": "level_abs_deviation_critical",
+        "priority": 80,
+        "reason_template": "Η στάθμη αποκλίνει σημαντικά από τον {baseline_label}.",
+        "operator_reason": "Η στάθμη δεν ταιριάζει με τη συνήθη τιμή της.",
+        "technical_description": "Uses absolute difference between current_value and statistics.avg_24h.",
+        "notes": "Disabled by default; needs per-channel validation."
+      }
+    ],
+    "quality": [
+      {
+        "rule_id": "quality_below_60",
+        "enabled": true,
+        "category": "quality",
+        "condition_type": "value_below_threshold",
+        "warning_below": 60,
+        "severity": "warning",
+        "priority": 35,
+        "reason_template": "Η ποιότητα μέτρησης είναι κάτω από 60%.",
+        "operator_reason": "Η ποιότητα του καναλιού είναι χαμηλή και χρειάζεται προσοχή.",
+        "technical_description": "Catalog default rule for quality channels. Triggers warning when current_value is below 60.",
+        "notes": "Default Phase 8 quality rule. In Phase 9 this threshold will become editable from UI."
+      },
+      {
+        "rule_id": "quality_drop_vs_24h_avg",
+        "enabled": false,
+        "category": "quality",
+        "condition_type": "deviation_below_baseline",
+        "baseline": "avg_24h",
+        "baseline_label": "Μ.Ο. 24ώρου",
+        "warning_deviation_percent": 20,
+        "critical_deviation_percent": 40,
+        "min_baseline_value": 1e-06,
+        "priority": 60,
+        "reason_template": "Η τιμή ποιότητας έχει πέσει σημαντικά σε σχέση με τον {baseline_label}.",
+        "operator_reason": "Μεγάλη πτώση ποιότητας σε σχέση με την πρόσφατη εικόνα.",
+        "technical_description": "Compares current_value against statistics.avg_24h.",
+        "notes": "Disabled by default until quality semantics are confirmed."
+      }
+    ],
+    "motor_current": [
+      {
+        "rule_id": "motor_zero_current_when_expected",
+        "enabled": true,
+        "category": "motor_current",
+        "condition_type": "zero_value",
+        "requires_channel_flag": "motor_current_expected",
+        "zero_epsilon": 1e-06,
+        "severity": "warning",
+        "priority": 50,
+        "reason_template": "Η ένταση κινητήρα είναι μηδενική ενώ αναμένεται λειτουργία.",
+        "operator_reason": "Πιθανή στάση, διακοπή ή μη λειτουργία κινητήρα.",
+        "technical_description": "Runs only when motor_current_expected=true is configured for the channel.",
+        "notes": "Guarded by channel flag because many motors can normally be stopped."
+      },
+      {
+        "rule_id": "motor_current_deviation_vs_24h_avg",
+        "enabled": false,
+        "category": "motor_current",
+        "condition_type": "absolute_percent_deviation_from_baseline",
+        "baseline": "avg_24h",
+        "baseline_label": "Μ.Ο. 24ώρου",
+        "warning_deviation_percent": 50,
+        "critical_deviation_percent": 100,
+        "min_baseline_value": 1e-06,
+        "priority": 80,
+        "reason_template": "Η ένταση κινητήρα αποκλίνει σημαντικά από τη συνήθη τιμή.",
+        "operator_reason": "Η ένταση δεν ταιριάζει με τη συνήθη συμπεριφορά του κινητήρα.",
+        "technical_description": "Compares current_value against statistics.avg_24h.",
+        "notes": "Disabled by default until motor behavior is verified."
+      }
+    ],
+    "pressure": [
+      {
+        "rule_id": "pressure_rapid_change_1h",
+        "enabled": true,
+        "category": "pressure",
+        "condition_type": "rapid_change",
+        "delta_field": "delta_1h",
+        "warning_abs_delta_config_key": "rapid_change_warning_1h",
+        "critical_abs_delta_config_key": "rapid_change_critical_1h",
+        "priority": 50,
+        "reason_template_increase": "Η πίεση αυξήθηκε απότομα την τελευταία ώρα.",
+        "reason_template_decrease": "Η πίεση μειώθηκε απότομα την τελευταία ώρα.",
+        "operator_reason": "Απότομη μεταβολή πίεσης.",
+        "technical_description": "Uses statistics.delta_1h and per-channel rapid_change thresholds.",
+        "notes": "Does nothing until rapid_change thresholds are set per channel."
+      }
+    ]
+  },
+  "channel_overrides": {},
+  "example_channel_override": {
+    "101": {
+      "disabled_rules": [
+        "flow_low_vs_24h_avg"
+      ],
+      "rules": {
+        "flow_zero_current_value": {
+          "enabled": true,
+          "severity": "critical",
+          "zero_epsilon": 0.01
+        }
+      }
+    }
+  }
+}
