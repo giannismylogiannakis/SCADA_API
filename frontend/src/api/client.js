@@ -1,5 +1,10 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+﻿function normalizeBaseUrl(value) {
+  return value ? value.replace(/\/+$/, "") : "";
+}
+
+const API_BASE_URL = normalizeBaseUrl(
+  import.meta.env.VITE_API_BASE_URL || window.location.origin
+);
 
 export function getApiBaseUrl() {
   return API_BASE_URL;
@@ -10,8 +15,10 @@ async function apiRequest(path, options = {}) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
       method: options.method || "GET",
       headers: {
         Accept: "application/json",

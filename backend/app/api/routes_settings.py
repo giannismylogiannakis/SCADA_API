@@ -19,7 +19,6 @@ from app.api.routes_current import get_channel_num, load_metadata_channels
 from app.settings.repository import (
     delete_channel_override,
     delete_rule_override,
-    get_channel_override_record,
     get_rule_override_record,
     load_all_channel_override_records,
     load_all_rule_override_records,

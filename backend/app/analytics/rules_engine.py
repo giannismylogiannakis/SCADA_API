@@ -170,20 +170,6 @@ def is_truthy_config(value: Any) -> bool:
     return False
 
 
-def is_falsey_config(value: Any) -> bool:
-    """Interpret config values that represent false."""
-    if isinstance(value, bool):
-        return not value
-
-    if isinstance(value, int | float):
-        return value == 0
-
-    if isinstance(value, str):
-        return value.strip().lower() in {"false", "0", "no", "n", "off"}
-
-    return False
-
-
 def is_scada_status_valid(channel: dict[str, Any]) -> bool:
     """Check if SCADA says that the channel value is valid enough to evaluate."""
     status = channel.get("scada_status")

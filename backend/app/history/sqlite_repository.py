@@ -585,62 +585,6 @@ def first_values_for_channels_in_range(
     }
 
 
-def same_hour_previous_7d_for_channels(
-    conn: sqlite3.Connection,
-    cnl_nums: list[int],
-    end_dt: datetime,
-) -> dict[int, dict[str, Any]]:
-    """Aggregate same-hour values for many channels in one query."""
-    if not cnl_nums:
-        return {}
-
-    placeholders = make_placeholders(cnl_nums)
-
-    start_dt = end_dt - timedelta(days=7)
-    hour_text = f"{end_dt.hour:02d}"
-    current_day = end_dt.date().isoformat()
-
-    rows = conn.execute(
-        f"""
-        SELECT
-            cnl_num,
-            COUNT(*) AS sample_count,
-            AVG(val) AS avg_value,
-            MIN(val) AS min_value,
-            MAX(val) AS max_value,
-            MIN(ts) AS first_ts,
-            MAX(ts) AS last_ts
-        FROM history_values
-        WHERE cnl_num IN ({placeholders})
-          AND ts >= ?
-          AND ts < ?
-          AND substr(ts, 12, 2) = ?
-          AND substr(ts, 1, 10) < ?
-          AND val IS NOT NULL
-        GROUP BY cnl_num
-        """,
-        (
-            *cnl_nums,
-            start_dt.isoformat(timespec="seconds"),
-            end_dt.isoformat(timespec="seconds"),
-            hour_text,
-            current_day,
-        ),
-    ).fetchall()
-
-    return {
-        int(row["cnl_num"]): {
-            "sample_count": row["sample_count"],
-            "avg": round_float(row["avg_value"]),
-            "min": round_float(row["min_value"]),
-            "max": round_float(row["max_value"]),
-            "first_ts": row["first_ts"],
-            "last_ts": row["last_ts"],
-        }
-        for row in rows
-    }
-
-
 def calculate_delta(
     latest_value: Any,
     first_value: Any,

@@ -13,6 +13,9 @@ from app.api.routes_metadata import router as metadata_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
 app = FastAPI(
     title="Rapid SCADA Telemetry Dashboard Backend",
     description="Read-only local backend for Rapid SCADA telemetry metadata and analytics.",
@@ -62,3 +65,12 @@ def root():
         "settings_channels": "/api/settings/channels",
         "settings_rules": "/api/settings/rules",
     }
+
+FRONTEND_DIST_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+if FRONTEND_DIST_DIR.exists():
+    app.mount(
+        "/dashboard",
+        StaticFiles(directory=FRONTEND_DIST_DIR, html=True),
+        name="dashboard",
+    )
