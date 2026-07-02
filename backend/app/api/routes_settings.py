@@ -25,6 +25,8 @@ from app.settings.repository import (
     merge_channel_override,
     save_channel_override,
     save_rule_override,
+    load_email_notification_settings_record,
+    save_email_notification_settings,
 )
 
 
@@ -569,6 +571,83 @@ def build_channel_settings_row(
         "has_ui_override": override_record is not None,
     }
 
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def clean_email_list(value: Any) -> list[str]:
+    """Clean and validate email recipients."""
+    if value is None:
+        return []
+
+    if isinstance(value, str):
+        raw_items = re.split(r"[\n,;]+", value)
+    elif isinstance(value, list):
+        raw_items = value
+    else:
+        raise ValueError("Η λίστα email πρέπει να είναι λίστα ή κείμενο.")
+
+    emails: list[str] = []
+
+    for item in raw_items:
+        email = str(item or "").strip().lower()
+        if not email:
+            continue
+
+        if not EMAIL_PATTERN.match(email):
+            raise ValueError(f"Μη έγκυρη διεύθυνση email: {email}")
+
+        if email not in emails:
+            emails.append(email)
+
+    return emails
+
+
+def clean_email_notification_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Clean email notification settings payload."""
+    if not isinstance(payload, dict):
+        raise ValueError("Το σώμα του request πρέπει να είναι JSON object.")
+
+    cleaned: dict[str, Any] = {}
+
+    if "enabled" in payload:
+        cleaned["enabled"] = parse_bool(payload.get("enabled"), "enabled")
+
+    if "recipients" in payload:
+        cleaned["recipients"] = clean_email_list(payload.get("recipients"))
+
+    cleaned["only_static_critical_thresholds"] = True
+
+    return cleaned
+
+
+@router.get("/email-notifications")
+async def get_email_notification_settings() -> dict[str, Any]:
+    """Return email notification settings."""
+    record = load_email_notification_settings_record()
+
+    return {
+        "ok": True,
+        "settings": record["settings"],
+        "updated_at": record["updated_at"],
+    }
+
+
+@router.put("/email-notifications")
+async def put_email_notification_settings(payload: dict[str, Any]) -> dict[str, Any]:
+    """Save email notification settings."""
+    try:
+        cleaned = clean_email_notification_payload(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    saved = save_email_notification_settings(cleaned)
+
+    return {
+        "ok": True,
+        "message": "Οι ρυθμίσεις email αποθηκεύτηκαν.",
+        "settings": saved["settings"],
+        "updated_at": saved["updated_at"],
+    }
 
 @router.get("/channels")
 async def get_settings_channels(

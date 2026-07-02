@@ -82,3 +82,15 @@ export async function updateCategoryVisibility(category, visible) {
     timeoutMs: 30000,
   });
 }
+
+export async function fetchEmailNotificationSettings() {
+  return apiGet("/api/settings/email-notifications", {
+    timeoutMs: 30000,
+  });
+}
+
+export async function saveEmailNotificationSettings(payload) {
+  return apiPut("/api/settings/email-notifications", payload, {
+    timeoutMs: 30000,
+  });
+}

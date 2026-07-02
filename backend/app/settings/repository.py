@@ -53,6 +53,16 @@ def ensure_settings_schema(conn: sqlite3.Connection) -> None:
         """
     )
 
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS email_notification_settings (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            settings_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
     conn.commit()
 
 
@@ -349,3 +359,65 @@ def apply_rule_overrides_to_catalog(catalog: dict[str, Any]) -> dict[str, Any]:
                 rule["_has_ui_override"] = True
 
     return result
+
+DEFAULT_EMAIL_NOTIFICATION_SETTINGS: dict[str, Any] = {
+    "enabled": False,
+    "recipients": [],
+    "only_static_critical_thresholds": True,
+}
+
+
+def load_email_notification_settings_record() -> dict[str, Any]:
+    """Return email notification settings from SQLite."""
+    with open_settings_db() as conn:
+        row = conn.execute(
+            """
+            SELECT settings_json, updated_at
+            FROM email_notification_settings
+            WHERE id = 1
+            """
+        ).fetchone()
+
+    if row is None:
+        return {
+            "settings": dict(DEFAULT_EMAIL_NOTIFICATION_SETTINGS),
+            "updated_at": None,
+        }
+
+    settings = deep_merge_dicts(
+        DEFAULT_EMAIL_NOTIFICATION_SETTINGS,
+        json_loads(row["settings_json"]),
+    )
+
+    return {
+        "settings": settings,
+        "updated_at": row["updated_at"],
+    }
+
+
+def save_email_notification_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    """Save email notification settings to SQLite."""
+    updated_at = utc_now_iso()
+
+    merged_settings = deep_merge_dicts(
+        DEFAULT_EMAIL_NOTIFICATION_SETTINGS,
+        settings,
+    )
+
+    with open_settings_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO email_notification_settings (id, settings_json, updated_at)
+            VALUES (1, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                settings_json = excluded.settings_json,
+                updated_at = excluded.updated_at
+            """,
+            (json_dumps(merged_settings), updated_at),
+        )
+        conn.commit()
+
+    return {
+        "settings": merged_settings,
+        "updated_at": updated_at,
+    }

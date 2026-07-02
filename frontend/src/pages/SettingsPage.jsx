@@ -7,6 +7,8 @@ import {
   resetChannelSettings,
   saveChannelSettings,
   updateCategoryVisibility,
+  fetchEmailNotificationSettings,
+  saveEmailNotificationSettings,
 } from "../api/settingsApi";
 
 const DEFAULT_CATEGORIES = [
@@ -1145,6 +1147,10 @@ export default function SettingsPage() {
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false);
+  const [emailRecipientsText, setEmailRecipientsText] = useState("");
+  const [emailSettingsUpdatedAt, setEmailSettingsUpdatedAt] = useState(null);
+
   const loadChannels = useCallback(async () => {
     setLoading(true);
     setErrorMessage("");
@@ -1229,6 +1235,29 @@ export default function SettingsPage() {
     loadSelectedChannel();
   }, [loadSelectedChannel]);
 
+    useEffect(() => {
+    async function loadEmailSettings() {
+      try {
+        const payload = await fetchEmailNotificationSettings();
+        const settings = payload?.settings || {};
+
+        setEmailNotificationsEnabled(settings.enabled === true);
+        setEmailRecipientsText(
+          Array.isArray(settings.recipients)
+            ? settings.recipients.join("\n")
+            : ""
+        );
+        setEmailSettingsUpdatedAt(payload?.updated_at || null);
+      } catch (error) {
+        setErrorMessage(
+          error.message || "Αποτυχία φόρτωσης ρυθμίσεων email."
+        );
+      }
+    }
+
+    loadEmailSettings();
+  }, []);
+
   const filteredCountText = useMemo(() => {
     if (loading) {
       return "Φόρτωση...";
@@ -1270,6 +1299,41 @@ export default function SettingsPage() {
         setSaving(false);
       }
     }
+
+    async function handleSaveEmailSettings() {
+    setSaving(true);
+    setMessage("");
+    setErrorMessage("");
+
+    const recipients = emailRecipientsText
+      .split(/[\n,;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    try {
+      const payload = await saveEmailNotificationSettings({
+        enabled: emailNotificationsEnabled,
+        recipients,
+      });
+
+      const settings = payload?.settings || {};
+
+      setEmailNotificationsEnabled(settings.enabled === true);
+      setEmailRecipientsText(
+        Array.isArray(settings.recipients)
+          ? settings.recipients.join("\n")
+          : ""
+      );
+      setEmailSettingsUpdatedAt(payload?.updated_at || null);
+      setMessage("Οι ρυθμίσεις email αποθηκεύτηκαν.");
+    } catch (error) {
+      setErrorMessage(
+        error.message || "Αποτυχία αποθήκευσης ρυθμίσεων email."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleSave() {
   if (!selectedCnlNum) {
@@ -1487,6 +1551,55 @@ function handleRemoveCustomRule(ruleId) {
           <span>{message}</span>
         </div>
       )}
+
+            <section className="settings-email-panel">
+        <div className="settings-email-panel__header">
+          <div>
+            <h3>Ειδοποιήσεις email κρίσιμων ορίων</h3>
+            <p>
+              Αποστολή email μόνο όταν παραβιαστεί κρίσιμο κάτω ή άνω όριο.
+              Δεν αφορά warning, invalid SCADA ή αποκλίσεις ιστορικών.
+            </p>
+          </div>
+
+          <label className="settings-checkbox settings-checkbox--compact">
+            <input
+              type="checkbox"
+              checked={emailNotificationsEnabled}
+              onChange={(event) =>
+                setEmailNotificationsEnabled(event.target.checked)
+              }
+            />
+            <span>Ενεργές ειδοποιήσεις email</span>
+          </label>
+        </div>
+
+        <label className="settings-email-panel__field">
+          <span>Παραλήπτες</span>
+          <textarea
+            value={emailRecipientsText}
+            onChange={(event) => setEmailRecipientsText(event.target.value)}
+            placeholder={"email1@example.com\nemail2@example.com"}
+            rows={3}
+          />
+        </label>
+
+        <div className="settings-email-panel__footer">
+          <span>
+            Αποστολέας θα οριστεί στο backend .env, όχι εδώ.
+            {emailSettingsUpdatedAt ? ` Τελευταία αλλαγή: ${emailSettingsUpdatedAt}` : ""}
+          </span>
+
+          <button
+            type="button"
+            className="scada-button"
+            disabled={saving}
+            onClick={handleSaveEmailSettings}
+          >
+            Αποθήκευση email
+          </button>
+        </div>
+      </section>
 
       <div className="settings-layout">
         <section className="settings-list-panel">
