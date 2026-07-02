@@ -33,4 +33,7 @@ class Settings(BaseSettings):
     email_notifications_use_tls: bool = True
     email_notifications_subject_prefix: str = "Rapid SCADA"
 
+    critical_alarm_watcher_enabled: bool = True
+    critical_alarm_watcher_interval_seconds: float = 5.0
+
 settings = Settings()

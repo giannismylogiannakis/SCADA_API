@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import smtplib
 import ssl
+import threading
 from email.message import EmailMessage
 from typing import Any
 
@@ -15,6 +16,7 @@ from app.settings.repository import (
 )
 
 logger = logging.getLogger(__name__)
+_notification_processing_lock = threading.Lock()
 
 CRITICAL_THRESHOLD_RULE_IDS = {
     "threshold_critical_low",
@@ -154,94 +156,105 @@ def process_critical_threshold_email_notifications(alerts: list[dict[str, Any]])
     - Send once when a critical threshold alert becomes active.
     - Do not send again while the same channel/rule remains active.
     - Reset when the channel/rule is no longer active.
+
+    A process-level lock avoids duplicate emails if the dashboard endpoint and
+    the background watcher run at the same time.
     """
-    record = load_email_notification_settings_record()
-    notification_settings = record.get("settings", {})
-
-    if not notification_settings.get("enabled"):
+    if not _notification_processing_lock.acquire(blocking=False):
+        logger.info("Critical threshold email notification processing is already running.")
         return
 
-    recipients = notification_settings.get("recipients")
+    try:
+        record = load_email_notification_settings_record()
+        notification_settings = record.get("settings", {})
 
-    if not isinstance(recipients, list) or not recipients:
-        return
+        if not notification_settings.get("enabled"):
+            return
 
-    if not is_smtp_configured():
-        logger.warning("Email notifications enabled but SMTP is not configured.")
-        return
+        recipients = notification_settings.get("recipients")
 
-    active_state_records = load_active_email_notification_state_records()
+        if not isinstance(recipients, list) or not recipients:
+            return
 
-    current_alerts_by_key = {
-        get_notification_key(alert): alert
-        for alert in alerts
-        if is_critical_threshold_alert(alert)
-    }
+        if not is_smtp_configured():
+            logger.warning("Email notifications enabled but SMTP is not configured.")
+            return
 
-    now = utc_now_iso()
+        active_state_records = load_active_email_notification_state_records()
 
-    for notification_key, alert in current_alerts_by_key.items():
-        previous_state = active_state_records.get(notification_key)
-
-        state = {
-            "notification_key": notification_key,
-            "cnl_num": alert.get("cnl_num"),
-            "rule_id": alert.get("rule_id"),
-            "rule_type": alert.get("rule_type"),
-            "display_name": alert.get("display_name") or alert.get("channel_name"),
-            "reason": alert.get("reason"),
-            "current_value": alert.get("current_value"),
-            "unit": alert.get("unit"),
-            "last_alert_at": now,
+        current_alerts_by_key = {
+            get_notification_key(alert): alert
+            for alert in alerts
+            if is_critical_threshold_alert(alert)
         }
 
-        if previous_state:
+        now = utc_now_iso()
+
+        for notification_key, alert in current_alerts_by_key.items():
+            previous_state = active_state_records.get(notification_key)
+
+            state = {
+                "notification_key": notification_key,
+                "cnl_num": alert.get("cnl_num"),
+                "rule_id": alert.get("rule_id"),
+                "rule_type": alert.get("rule_type"),
+                "display_name": alert.get("display_name") or alert.get("channel_name"),
+                "reason": alert.get("reason"),
+                "current_value": alert.get("current_value"),
+                "unit": alert.get("unit"),
+                "last_alert_at": now,
+            }
+
+            if previous_state:
+                save_email_notification_state(
+                    notification_key,
+                    {
+                        **previous_state.get("state", {}),
+                        **state,
+                    },
+                    active=True,
+                )
+                continue
+
+            try:
+                send_email(
+                    recipients=recipients,
+                    subject=build_email_subject(alert),
+                    body=build_email_body(alert),
+                )
+            except Exception as exc:
+                logger.exception(
+                    "Failed to send critical threshold email for %s: %s",
+                    notification_key,
+                    exc,
+                )
+                continue
+
             save_email_notification_state(
                 notification_key,
                 {
-                    **previous_state.get("state", {}),
                     **state,
+                    "first_sent_at": now,
+                    "last_sent_at": now,
                 },
                 active=True,
             )
-            continue
 
-        try:
-            send_email(
-                recipients=recipients,
-                subject=build_email_subject(alert),
-                body=build_email_body(alert),
-            )
-        except Exception as exc:
-            logger.exception(
-                "Failed to send critical threshold email for %s: %s",
+        for notification_key, state_record in active_state_records.items():
+            if notification_key in current_alerts_by_key:
+                continue
+
+            previous_state = state_record.get("state", {})
+            recovered_state = {
+                **previous_state,
+                "last_recovered_at": now,
+            }
+
+            save_email_notification_state(
                 notification_key,
-                exc,
+                recovered_state,
+                active=False,
             )
-            continue
 
-        save_email_notification_state(
-            notification_key,
-            {
-                **state,
-                "first_sent_at": now,
-                "last_sent_at": now,
-            },
-            active=True,
-        )
-
-    for notification_key, state_record in active_state_records.items():
-        if notification_key in current_alerts_by_key:
-            continue
-
-        previous_state = state_record.get("state", {})
-        recovered_state = {
-            **previous_state,
-            "last_recovered_at": now,
-        }
-
-        save_email_notification_state(
-            notification_key,
-            recovered_state,
-            active=False,
-        )
+    finally:
+        _notification_processing_lock.release()

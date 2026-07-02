@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
+from app.notifications.critical_alarm_watcher import get_critical_alarm_watcher_status
 from app.notifications.email_notifier import process_critical_threshold_email_notifications
 from app.analytics.rules_engine import build_overview, evaluate_channels
 from app.api.routes_current import (
@@ -347,6 +348,14 @@ async def get_alerts(
     except ScadaApiError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+
+@router.get("/alerts/watcher/status")
+async def get_alert_watcher_status() -> dict[str, Any]:
+    """Return critical alarm watcher status."""
+    return {
+        "ok": True,
+        "watcher": get_critical_alarm_watcher_status(),
+    }
 
 @router.get("/overview")
 async def get_overview(

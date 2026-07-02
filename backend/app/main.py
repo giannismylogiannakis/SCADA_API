@@ -1,4 +1,10 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
+from app.notifications.critical_alarm_watcher import (
+    start_critical_alarm_watcher,
+    stop_critical_alarm_watcher,
+)
 
 from app.api import (
     routes_alerts,
@@ -16,10 +22,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start and stop background services."""
+    await start_critical_alarm_watcher()
+
+    try:
+        yield
+    finally:
+        await stop_critical_alarm_watcher()
+
 app = FastAPI(
     title="Rapid SCADA Telemetry Dashboard Backend",
     description="Read-only local backend for Rapid SCADA telemetry metadata and analytics.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 allowed_origins = [
