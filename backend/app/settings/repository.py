@@ -63,6 +63,17 @@ def ensure_settings_schema(conn: sqlite3.Connection) -> None:
         """
     )
 
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS email_notification_state (
+            notification_key TEXT PRIMARY KEY,
+            state_json TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
     conn.commit()
 
 
@@ -419,5 +430,71 @@ def save_email_notification_settings(settings: dict[str, Any]) -> dict[str, Any]
 
     return {
         "settings": merged_settings,
+        "updated_at": updated_at,
+    }
+
+def load_active_email_notification_state_records() -> dict[str, dict[str, Any]]:
+    """Return active email notification states."""
+    with open_settings_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT notification_key, state_json, active, updated_at
+            FROM email_notification_state
+            WHERE active = 1
+            ORDER BY notification_key
+            """
+        ).fetchall()
+
+    result: dict[str, dict[str, Any]] = {}
+
+    for row in rows:
+        result[str(row["notification_key"])] = {
+            "state": json_loads(row["state_json"]),
+            "active": bool(row["active"]),
+            "updated_at": row["updated_at"],
+        }
+
+    return result
+
+
+def save_email_notification_state(
+    notification_key: str,
+    state: dict[str, Any],
+    *,
+    active: bool,
+) -> dict[str, Any]:
+    """Insert or update one email notification state."""
+    updated_at = utc_now_iso()
+    state_to_save = dict(state)
+    state_to_save["active"] = active
+
+    with open_settings_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO email_notification_state (
+                notification_key,
+                state_json,
+                active,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(notification_key) DO UPDATE SET
+                state_json = excluded.state_json,
+                active = excluded.active,
+                updated_at = excluded.updated_at
+            """,
+            (
+                notification_key,
+                json_dumps(state_to_save),
+                1 if active else 0,
+                updated_at,
+            ),
+        )
+        conn.commit()
+
+    return {
+        "notification_key": notification_key,
+        "state": state_to_save,
+        "active": active,
         "updated_at": updated_at,
     }

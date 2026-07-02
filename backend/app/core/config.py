@@ -24,6 +24,13 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
-
+    
+    email_notifications_smtp_host: str | None = None
+    email_notifications_smtp_port: int = 587
+    email_notifications_smtp_username: str | None = None
+    email_notifications_smtp_password: str | None = None
+    email_notifications_from: str | None = None
+    email_notifications_use_tls: bool = True
+    email_notifications_subject_prefix: str = "Rapid SCADA"
 
 settings = Settings()

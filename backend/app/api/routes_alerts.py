@@ -5,8 +5,9 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
+from app.notifications.email_notifier import process_critical_threshold_email_notifications
 from app.analytics.rules_engine import build_overview, evaluate_channels
 from app.api.routes_current import (
     batch_items,
@@ -295,6 +296,7 @@ async def build_current_snapshot(
 
 @router.get("/alerts")
 async def get_alerts(
+    background_tasks: BackgroundTasks,
     category: str | None = Query(
         default=None,
         description="Optional category filter, e.g. flow, level, quality.",
@@ -319,6 +321,12 @@ async def get_alerts(
             snapshot["items"],
             include_normal=include_normal or severity == "normal",
         )
+
+        if category is None and severity is None:
+            background_tasks.add_task(
+                process_critical_threshold_email_notifications,
+                alerts,
+            )
 
         if category:
             alerts = [alert for alert in alerts if alert.get("category") == category]
