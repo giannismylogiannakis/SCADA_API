@@ -1130,3 +1130,37 @@ body {
   font-weight: 900;
   line-height: 1.35;
 }
+
+.settings-category-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.settings-channel-row--hidden {
+  opacity: 0.68;
+}
+
+.settings-channel-row--hidden .settings-channel-row__main strong {
+  color: #64748b;
+}
+
+.settings-channel-row__meta .settings-channel-row__hidden-badge {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.settings-visibility-box {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.15rem 0;
+}
+
+.settings-visibility-box p {
+  margin: 0;
+  padding: 0 0.65rem 0 1.9rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+}

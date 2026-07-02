@@ -45,6 +45,18 @@ app.include_router(routes_history_discovery.router)
 app.include_router(routes_history.history_router)
 app.include_router(routes_history.statistics_router)
 
+@app.middleware("http")
+async def add_dashboard_no_cache_headers(request, call_next):
+    """Prevent stale React dashboard files from being cached inside Rapid SCADA iframe."""
+    response = await call_next(request)
+
+    if request.url.path.startswith("/dashboard"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
+    return response
+
 
 @app.get("/")
 def root():

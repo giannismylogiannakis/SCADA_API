@@ -242,6 +242,7 @@ def merge_current_with_metadata(
             "category_label": category_info["category_label"],
             "unit": category_info["unit"],
             "installation": category_info["installation"],
+            "dashboard_visible": category_info.get("dashboard_visible", True),
             "tag_code": channel.get("tag_code"),
             "tag_code": channel.get("tag_code"),
             "device_num": channel.get("device_num"),

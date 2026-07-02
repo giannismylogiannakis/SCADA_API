@@ -6,6 +6,7 @@ import {
   reloadDashboardSettings,
   resetChannelSettings,
   saveChannelSettings,
+  updateCategoryVisibility,
 } from "../api/settingsApi";
 
 const DEFAULT_CATEGORIES = [
@@ -178,6 +179,7 @@ const RULE_NUMERIC_LABELS = {
 
 const EMPTY_FORM = {
   zero_flow_enabled: false,
+  dashboard_visible: true,
   warning_low: "",
   critical_low: "",
   warning_high: "",
@@ -199,6 +201,7 @@ function buildFormFromSettings(item) {
 
   return {
     zero_flow_enabled: boolValue(effective.zero_flow_enabled),
+    dashboard_visible: effective.dashboard_visible !== false,
     warning_low: valueOrEmpty(thresholds.warning_low),
     critical_low: valueOrEmpty(thresholds.critical_low),
     warning_high: valueOrEmpty(thresholds.warning_high),
@@ -273,6 +276,7 @@ function buildPayloadFromForm(form, ruleForms = {}) {
 
   return {
     zero_flow_enabled: Boolean(form.zero_flow_enabled),
+    dashboard_visible: form.dashboard_visible !== false,
     thresholds: {
       warning_low: cleanNumberText(form.warning_low),
       critical_low: cleanNumberText(form.critical_low),
@@ -511,11 +515,13 @@ function ChannelSettingsList({
         <button
           key={channel.cnl_num}
           type="button"
-          className={
-            channel.cnl_num === selectedCnlNum
-              ? "settings-channel-row settings-channel-row--active"
-              : "settings-channel-row"
-          }
+          className={[
+          "settings-channel-row",
+          channel.cnl_num === selectedCnlNum ? "settings-channel-row--active" : "",
+          channel.dashboard_visible === false ? "settings-channel-row--hidden" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
           onClick={() => onSelect(channel.cnl_num)}
         >
           <span className="settings-channel-row__main">
@@ -527,7 +533,7 @@ function ChannelSettingsList({
           </span>
 
           <span className="settings-channel-row__meta">
-            <em>{categoryLabel(channel.category, categories)}</em>
+            {channel.dashboard_visible === false ? <b className="settings-channel-row__hidden-badge">Κρυφό</b> : null}
             {channel.has_ui_override ? <b>UI</b> : null}
           </span>
         </button>
@@ -843,6 +849,32 @@ function ChannelSettingsForm({
         >
           {formatOverrideStatus(selectedItem)}
         </span>
+      </div>
+
+      <div className="settings-section-title">
+        Εμφάνιση στο dashboard
+      </div>
+
+      <div className="settings-visibility-box">
+        <label className="settings-checkbox">
+          <input
+            type="checkbox"
+            checked={form.dashboard_visible !== false}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                dashboard_visible: event.target.checked,
+              }))
+            }
+          />
+          <span>Να εμφανίζεται αυτό το κανάλι στη Γενική Ανασκόπηση</span>
+        </label>
+
+        <p>
+          Αν το ξετικάρεις, το κανάλι δεν θα εμφανίζεται στον πίνακα προειδοποιήσεων
+          ούτε στους πίνακες κατηγοριών του dashboard. Οι ρυθμίσεις και τα alarms
+          δεν διαγράφονται.
+        </p>
       </div>
 
       <div className="settings-section-title">
@@ -1205,6 +1237,40 @@ export default function SettingsPage() {
     return `${channels.length} κανάλια`;
   }, [loading, channels.length]);
 
+  async function handleCategoryVisibility(visible) {
+  if (!selectedCategory || selectedCategory === "all") {
+    setErrorMessage("Διάλεξε πρώτα συγκεκριμένη κατηγορία.");
+    return;
+  }
+
+  const label = categoryLabel(selectedCategory, categories);
+  const actionText = visible ? "εμφανιστεί" : "κρυφτεί";
+  const confirmed = window.confirm(
+    `Να ${actionText} ολόκληρη η κατηγορία "${label}" στο dashboard;`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setSaving(true);
+  setMessage("");
+  setErrorMessage("");
+
+  try {
+        const result = await updateCategoryVisibility(selectedCategory, visible);
+        setMessage(
+          `${visible ? "Εμφανίστηκε" : "Κρύφτηκε"} η κατηγορία "${label}" στο dashboard (${result.updated_count || 0} κανάλια).`
+        );
+        await loadSelectedChannel();
+        await loadChannels();
+      } catch (error) {
+        setErrorMessage(error.message || "Αποτυχία αλλαγής εμφάνισης κατηγορίας.");
+      } finally {
+        setSaving(false);
+      }
+    }
+
   async function handleSave() {
   if (!selectedCnlNum) {
     return;
@@ -1383,6 +1449,27 @@ function handleRemoveCustomRule(ruleId) {
           />
           <span>Μόνο κανάλια με UI override</span>
         </label>
+
+        {selectedCategory !== "all" ? (
+        <div className="settings-category-actions">
+          <button
+            type="button"
+            className="scada-button"
+            disabled={saving}
+            onClick={() => handleCategoryVisibility(false)}
+          >
+            Απόκρυψη κατηγορίας
+          </button>
+          <button
+            type="button"
+            className="scada-button"
+            disabled={saving}
+            onClick={() => handleCategoryVisibility(true)}
+          >
+            Εμφάνιση κατηγορίας
+          </button>
+        </div>
+      ) : null}
 
         <strong>{filteredCountText}</strong>
       </section>

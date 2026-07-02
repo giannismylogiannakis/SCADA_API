@@ -120,6 +120,43 @@ def load_all_channel_override_records() -> dict[str, dict[str, Any]]:
 
     return result
 
+def get_channel_override_record(cnl_num: int | str) -> dict[str, Any] | None:
+    """Return one channel override record."""
+    with open_settings_db() as conn:
+        row = conn.execute(
+            """
+            SELECT cnl_num, settings_json, updated_at
+            FROM channel_settings_overrides
+            WHERE cnl_num = ?
+            """,
+            (int(cnl_num),),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "cnl_num": int(row["cnl_num"]),
+        "settings": json_loads(row["settings_json"]),
+        "updated_at": row["updated_at"],
+    }
+
+
+def merge_channel_override(cnl_num: int | str, partial_settings: dict[str, Any]) -> dict[str, Any]:
+    """Merge partial settings into an existing channel override."""
+    current_record = get_channel_override_record(cnl_num)
+    current_settings = (
+        current_record.get("settings", {})
+        if isinstance(current_record, dict)
+        else {}
+    )
+
+    if not isinstance(current_settings, dict):
+        current_settings = {}
+
+    merged_settings = deep_merge_dicts(current_settings, partial_settings)
+    return save_channel_override(cnl_num, merged_settings)
+
 
 def save_channel_override(cnl_num: int | str, settings: dict[str, Any]) -> dict[str, Any]:
     """Insert or update one channel override."""

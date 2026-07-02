@@ -247,6 +247,7 @@ def build_channel_classification(
         "installation": _clean_optional_text(channel_config.get("installation")),
         "inferred_category": inferred_category,
         "has_manual_config": bool(channel_config),
+        "dashboard_visible": channel_config.get("dashboard_visible") is not False,
     }
 
 

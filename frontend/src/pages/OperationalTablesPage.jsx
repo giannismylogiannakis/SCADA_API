@@ -152,6 +152,10 @@ function matchesCategory(row, selectedCategory) {
   return (row.category || "unknown") === selectedCategory;
 }
 
+function isDashboardVisible(row) {
+  return row?.dashboard_visible !== false;
+}
+
 function buildFallbackOverview(channels, alerts) {
   const countByStatus = (status) =>
     channels.filter((channel) => channel.operational_status === status).length;
@@ -584,6 +588,7 @@ export default function OperationalTablesPage() {
       const currentChannels = evaluations.map((evaluation) => ({
         ...evaluation,
         name: evaluation.channel_name || evaluation.display_name,
+        dashboard_visible: evaluation.dashboard_visible !== false,
         operational_status: evaluation.severity || "unknown",
         operational_status_label: evaluation.severity_label || "Άγνωστο",
         alert_reason: evaluation.severity !== "normal" ? evaluation.reason : null,
@@ -591,12 +596,14 @@ export default function OperationalTablesPage() {
         alert_rule_type: evaluation.rule_type,
       }));
 
-      const activeAlerts = currentChannels.filter(
+      const visibleChannels = currentChannels.filter(isDashboardVisible);
+
+      const activeAlerts = visibleChannels.filter(
         (evaluation) => evaluation.operational_status !== "normal"
       );
-      const overviewPayload = buildFallbackOverview(currentChannels, activeAlerts);
+      const overviewPayload = buildFallbackOverview(visibleChannels, activeAlerts);
 
-      setChannels(currentChannels);
+      setChannels(visibleChannels);
       setOverview(overviewPayload);
       setAlerts(activeAlerts);
 
@@ -608,7 +615,7 @@ export default function OperationalTablesPage() {
 
       if (includeStatistics) {
         try {
-          const cnlNums = currentChannels
+          const cnlNums = visibleChannels
             .map((channel) => channel.cnl_num)
             .filter((cnlNum) => cnlNum !== null && cnlNum !== undefined);
 

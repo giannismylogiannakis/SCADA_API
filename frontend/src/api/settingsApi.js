@@ -76,3 +76,9 @@ export async function fetchSettingsRules({
     timeoutMs: 30000,
   });
 }
+
+export async function updateCategoryVisibility(category, visible) {
+  return apiPut(`/api/settings/categories/${category}/visibility`, { visible }, {
+    timeoutMs: 30000,
+  });
+}

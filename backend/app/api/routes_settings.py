@@ -22,6 +22,7 @@ from app.settings.repository import (
     get_rule_override_record,
     load_all_channel_override_records,
     load_all_rule_override_records,
+    merge_channel_override,
     save_channel_override,
     save_rule_override,
 )
@@ -43,6 +44,7 @@ BOOLEAN_CHANNEL_FIELDS = {
     "movement_expected",
     "motor_current_expected",
     "allow_negative",
+    "dashboard_visible",
 }
 
 NUMERIC_CHANNEL_FIELDS = {
@@ -559,6 +561,7 @@ def build_channel_settings_row(
         "display_name": classification["display_name"] or channel.get("name"),
         "unit": classification["unit"],
         "installation": classification["installation"],
+        "dashboard_visible": classification.get("dashboard_visible", True),
         "default_config": default_channel_config,
         "ui_override": override_record.get("settings") if override_record else {},
         "ui_override_updated_at": override_record.get("updated_at") if override_record else None,
@@ -686,6 +689,51 @@ async def delete_settings_channel(cnl_num: int) -> dict[str, Any]:
         "message": "Το UI override του καναλιού αφαιρέθηκε. Θα χρησιμοποιείται ξανά το default config.",
     }
 
+
+@router.put("/categories/{category}/visibility")
+async def put_settings_category_visibility(
+    category: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Show or hide all active channels of a category in the dashboard."""
+    if not is_valid_category(category):
+        raise HTTPException(
+            status_code=400,
+            detail="Μη αποδεκτή κατηγορία. Επιτρεπτές τιμές: " + ", ".join(CATEGORY_LABELS.keys()),
+        )
+
+    try:
+        visible = parse_bool(payload.get("visible"), "visible")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    effective_config = load_channels_config(include_ui_overrides=True)
+    metadata_channels = load_metadata_channels(active_only=True)
+    updated: list[int] = []
+
+    for channel in metadata_channels:
+        cnl_num = get_channel_num(channel)
+        if cnl_num is None:
+            continue
+
+        classification = build_channel_classification(channel, config=effective_config)
+        if classification.get("category") != category:
+            continue
+
+        merge_channel_override(cnl_num, {"dashboard_visible": visible})
+        updated.append(cnl_num)
+
+    clear_dashboard_snapshot_cache()
+
+    return {
+        "ok": True,
+        "category": category,
+        "category_label": CATEGORY_LABELS.get(category, category),
+        "visible": visible,
+        "updated_count": len(updated),
+        "updated_cnl_nums": updated,
+        "message": "Η εμφάνιση της κατηγορίας ενημερώθηκε για το dashboard.",
+    }
 
 @router.get("/rules")
 async def get_settings_rules(
